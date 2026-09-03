@@ -176,6 +176,24 @@ In [AutoTriageHub.jsx](file:///Users/kbk/Desktop/Prism/frontend/src/components/A
 
 ---
 
+### 9. Interactive Top Bar Detail Popovers Architecture (`PrismTopBar.jsx`)
+- **Click-to-Reveal Details:**
+  Every interactive element in the top navigation bar displays rich diagnostic details and contextual actions when clicked:
+  1. **Project Pill Details Popover:**
+     - Displays Tier classification (`Tier-1 Critical`), SLA compliance (`99.98% Adherence`), Incident MTTR (`14.2 min`), primary Jira queue (`BILLING-SRE-QUEUE`), active on-call engineer, and 1-click jumps to the Live Triage Board & Setup Studio, plus the complete multi-project switcher roster.
+  2. **Global Command Palette (`⌘K`):**
+     - Clicking or pressing `⌘K` opens an interactive palette with direct jumps to Mission Control, Auto-Triage, Investigation Stream, and SRE Metrics, alongside quick incident ticket matches (`BILL-1049`).
+  3. **Notification Center (`Bell` Icon):**
+     - Displays 4 live incident telemetry alerts categorized by severity (Critical, Major, Action Required, Auto-Triaged) with timestamp, root cause snippet, `Mark All Read` toggle, and direct link to the Live Triage Board.
+  4. **Platform Help & Cheatsheet Popover (`HelpCircle`):**
+     - Displays engine runtime version (`ADK 2.8 • Gemini 2.5 Pro`), FastAPI daemon health, zero-trust write-lock status, and platform keyboard shortcuts (`⌘B`, `⌘K`, `Esc`).
+  5. **Platform Governance & Session Settings (`Settings`):**
+     - Displays current dynamic environment, polling cadence (`30s`), and telemetry broker status with a direct link to the Environment Matrix Editor.
+  6. **Engineer Identity & Delegated Authority Card (`User Avatar`):**
+     - Displays authenticated engineer credentials, cryptographic OAuth2 write delegation token validity (`Valid for 6h 42m`), assigned squad (`Payments Core Team`), and on-call shift details with a 1-click role switcher (`Admin Console` / `Project View`).
+
+---
+
 ## 3. How to Replicate in Any Codebase
 
 1. **Copy the Standalone Chat Component:**
