@@ -160,3 +160,44 @@ export async function fetchBoardTickets(projectKey) {
   const res = await fetch(`${API_BASE}/board/tickets/${projectKey}`);
   return res.json();
 }
+
+export async function updateBoardTicket(ticketKey, data) {
+  const res = await fetch(`${API_BASE}/board/tickets/${ticketKey}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
+
+export async function runTicketQuery(ticketKey, data) {
+  const res = await fetch(`${API_BASE}/board/tickets/${ticketKey}/run-query`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
+
+export async function syncTicketToJira(ticketKey, data) {
+  const res = await fetch(`${API_BASE}/board/tickets/${ticketKey}/sync-jira`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
+
+export async function fetchTeamActivity() {
+  const res = await fetch(`${API_BASE}/board/team-activity`);
+  return res.json();
+}
+
+export async function addTicketComment(ticketKey, data) {
+  const res = await fetch(`${API_BASE}/board/tickets/${ticketKey}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
