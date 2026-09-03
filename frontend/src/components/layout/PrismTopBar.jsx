@@ -30,8 +30,10 @@ import {
   Zap,
   Check,
   Radio,
-  BookOpen
+  BookOpen,
+  MessageSquarePlus
 } from "lucide-react";
+import { FrameworkFeedbackModal } from "../FrameworkFeedbackModal";
 
 export function PrismTopBar({
   projects = [],
@@ -52,6 +54,7 @@ export function PrismTopBar({
   const [activeModal, setActiveModal] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [readNotifications, setReadNotifications] = useState([]);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const topbarRef = useRef(null);
 
   const isAdmin = location.pathname.startsWith("/admin");
@@ -672,6 +675,18 @@ export function PrismTopBar({
                   <div style={{ display: "flex", justifyContent: "space-between" }}><span>Close Any Dialog</span> <kbd className="mono">Esc</kbd></div>
                 </div>
               </div>
+
+              <button
+                onClick={() => {
+                  navigate(isAdmin ? "/admin/docs" : `/p/${projectKey}/docs`);
+                  setActiveModal(null);
+                }}
+                className="btn-primary"
+                style={{ width: "100%", justifyContent: "center", fontSize: "11.5px", padding: "7px", gap: "6px" }}
+              >
+                <BookOpen size={13} />
+                Developer & Extensibility Docs
+              </button>
             </div>
           )}
         </div>
@@ -850,7 +865,62 @@ export function PrismTopBar({
             </div>
           )}
         </div>
+
+        {/* EXTENSIBILITY DOCS BUTTON */}
+        <button
+          onClick={() => {
+            setActiveModal(null);
+            navigate(isAdmin ? "/admin/docs" : `/p/${projectKey}/docs`);
+          }}
+          className="btn-ghost"
+          style={{
+            padding: "8px",
+            background: location.pathname.includes("/docs") ? "rgba(16, 185, 129, 0.15)" : "transparent",
+            color: location.pathname.includes("/docs") ? "var(--accent-teal)" : "var(--ink-secondary)",
+            borderRadius: "8px",
+            display: "flex",
+            alignItems: "center"
+          }}
+          title="Extensibility Documentation (Tools, MCP, Connectors, Agents)"
+        >
+          <BookOpen size={17} />
+        </button>
+
+        {/* FRAMEWORK FEEDBACK & ISSUE REPORT BUTTON */}
+        <button
+          onClick={() => {
+            setActiveModal(null);
+            setShowFeedbackModal(true);
+          }}
+          className="btn-ghost"
+          style={{
+            padding: "5px 11px",
+            fontSize: "12px",
+            fontWeight: "600",
+            gap: "6px",
+            borderRadius: "8px",
+            border: "1px solid rgba(236, 72, 153, 0.35)",
+            background: "rgba(236, 72, 153, 0.08)",
+            color: "var(--prism-pink)",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            transition: "all 0.15s ease"
+          }}
+          title="Report framework issue, chat problem, or submit new feature request"
+        >
+          <MessageSquarePlus size={14} />
+          <span>Feedback</span>
+        </button>
       </div>
+
+      {/* FRAMEWORK LEVEL FEEDBACK & BUG REPORT MODAL */}
+      <FrameworkFeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+        activeProject={activeProject}
+        activeEnvironment={activeEnvironment}
+      />
     </header>
   );
 }

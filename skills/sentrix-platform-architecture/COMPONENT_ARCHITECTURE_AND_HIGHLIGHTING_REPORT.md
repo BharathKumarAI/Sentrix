@@ -194,6 +194,23 @@ In [AutoTriageHub.jsx](file:///Users/kbk/Desktop/Prism/frontend/src/components/A
 
 ---
 
+### 10. Framework Feedback Modal & Extensibility Documentation (`FrameworkFeedbackModal.jsx` & `DocsPage.jsx`)
+- **Top Bar Feedback Button & Diagnostics Modal:**
+  - Placed directly in the header cluster with brand-pink accent and `MessageSquarePlus` icon.
+  - Supports reporting framework-level issues (chat stream disconnects, broker failures), submitting feature requests (new connectors, custom skills), and reporting performance lags.
+  - Automatically captures environment context (Project key, dynamic environment name, engineer identity, browser/OS user-agent, ISO timestamp).
+  - Dispatches feedback, generates an immediate tracking code (`STX-FEEDBACK-xxxx`), and stores it in persistent logs.
+- **Extensibility & Developer Documentation Hub (`DocsPage.jsx`):**
+  - Integrated into `/docs`, `/admin/docs`, `/p/:projectKey/docs`, and linked directly from the TopBar Help Popover.
+  - Contains full code recipes and schemas for:
+    1. **Adding Custom Python Tools:** Tool Broker registration, parameters JSON schema, and read-only vs. action proposal governance.
+    2. **Model Context Protocol (MCP):** Anthropic & Google ADK standard stdio/SSE transports, dynamic Gemini tool synthesis, and `mcp_config.json`.
+    3. **Datasource Connectors:** Subclassing `BaseConnector`, heartbeat probes, and credential security.
+    4. **Autonomous SRE Agents:** Google ADK 2.8 on Gemini 2.5 Pro architecture, iterative reasoning loops, and OKF v2.0 correlation.
+    5. **Interactive Tool Schema Validator:** In-browser JSON schema validation widget for testing custom tool definitions prior to production deployment.
+
+---
+
 ## 3. How to Replicate in Any Codebase
 
 1. **Copy the Standalone Chat Component:**

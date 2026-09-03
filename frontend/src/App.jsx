@@ -11,6 +11,7 @@ import { ProjectMetricsPage } from "./pages/ProjectMetricsPage";
 import { ProjectReportsPage } from "./pages/ProjectReportsPage";
 import { ProjectFeedbackPage } from "./pages/ProjectFeedbackPage";
 import { ProjectSetupStudioPage } from "./pages/ProjectSetupStudioPage";
+import { DocsPage } from "./pages/DocsPage";
 
 import { AdminOverviewPage } from "./pages/AdminOverviewPage";
 import { AdminDashboardPage } from "./pages/AdminDashboardPage";
@@ -140,6 +141,7 @@ export function App() {
           <Route path="reports" element={<ProjectReportsPage activeProject={activeProject} />} />
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="security" element={<AdminSecurityPolicyPage />} />
+          <Route path="docs" element={<DocsPage activeProject={activeProject} />} />
         </Route>
 
         {/* Project Routes (/p/:projectKey/*) */}
@@ -231,7 +233,10 @@ export function App() {
           <Route path="environments" element={<EnvironmentMatrixEditor activeProject={activeProject} />} />
           <Route path="parameters" element={<ParameterStudio activeProject={activeProject} isAdmin={true} />} />
           <Route path="settings" element={<ProjectCustomizationView activeProject={activeProject} />} />
+          <Route path="docs" element={<DocsPage activeProject={activeProject} />} />
         </Route>
+
+        <Route path="/docs" element={<Navigate to="/p/BILLING/docs" replace />} />
 
         {/* Catch-all fallback */}
         <Route path="*" element={<Navigate to="/p/BILLING/overview" replace />} />

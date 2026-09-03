@@ -347,4 +347,28 @@ When the autonomous agent processes an inquiry, instead of static loading text, 
   5. **Keyboard Shortcut:** `⌘B` / `Ctrl+B` toggles the sidebar on any platform.
   6. **Universal Screen Fit:** Automatically adapts to screen dimensions—auto-collapsing on tablets and small laptops (≤ 1024px) to preserve maximum workspace clarity, with fixed full-height overlay on mobile devices (≤ 768px).
 
+---
+
+## 11. Top Bar Framework Feedback & Bug Reporting Modal (`FrameworkFeedbackModal.jsx`)
+
+- **Top Bar Integration:** A dedicated glowing "Feedback" button in the right cluster of `PrismTopBar.jsx` opens an interactive glassmorphic modal for engineers to report platform issues or submit feature proposals.
+- **Reporting Categories:**
+  1. 🐞 **Framework Issue / Bug:** Used when the chat stream is unresponsive, a connector fails, or UI rendering glitches.
+  2. 💡 **Feature Request:** Used to propose new datasource connectors, agent skills, or notification hooks.
+  3. ⚡ **Latency / Performance:** Used to flag Gemini inference delay or connector probe timeouts.
+- **Automated Diagnostic Attachment:** Automatically captures active project key, resolved dynamic environment, authenticated user identity, browser user agent, and timestamp.
+- **Ticket Dispatch:** Generates an immediate tracking identifier (e.g. `STX-FEEDBACK-2049`) and records payloads into local state/backend storage.
+
+---
+
+## 12. Extensibility & Developer Documentation (`DocsPage.jsx`)
+
+Accessible via `/docs`, `/admin/docs`, and `/p/:projectKey/docs`:
+1. **Adding New Tools:** Python Tool Broker definitions, parameter schemas, and read-only execution vs. mutating Action Proposal requirements.
+2. **Model Context Protocol (MCP):** Native stdio and SSE server integration, dynamic Gemini tool synthesis, and `mcp_config.json` specifications.
+3. **Datasource Connectors:** `BaseConnector` subclassing, credential encryption, and heartbeat probe methods.
+4. **Autonomous Agent Specifications:** Google ADK 2.8 on Gemini 2.5 Pro, OKF v2.0 correlation, and multi-turn SRE reasoning loops.
+5. **Interactive Live Tool Schema Validator:** In-browser JSON schema validation widget for testing custom tool definitions prior to production deployment.
+
+
 

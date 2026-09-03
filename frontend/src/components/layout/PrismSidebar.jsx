@@ -104,6 +104,7 @@ export function PrismSidebar({
         { label: "Environments Matrix", path: `/p/${projectKey}/environments`, icon: Network },
         { label: "Parameter Studio", path: `/p/${projectKey}/parameters`, icon: Sliders },
         { label: "Settings & Instructions", path: `/p/${projectKey}/settings`, icon: Settings },
+        { label: "Extensibility Docs", path: `/p/${projectKey}/docs`, icon: BookOpen, badge: "MCP/ADK", badgeColor: "badge-teal" },
       ]
     }
   ];
@@ -122,6 +123,7 @@ export function PrismSidebar({
       items: [
         { label: "Projects Fleet", path: "/admin/projects", icon: Layers, badge: "Fleet", badgeColor: "badge-teal" },
         { label: "Add Project", path: "/admin/projects?create=true", icon: Plus, badge: "New", badgeColor: "badge-magenta" },
+        { label: "Developer Docs", path: "/admin/docs", icon: BookOpen, badge: "ADK 2.8", badgeColor: "badge-teal" },
         { label: "Skills", path: "/admin/skills", icon: Cpu },
         { label: "Prompts", path: "/admin/prompts", icon: FileText },
         { label: "Connectors Catalog", path: "/admin/connectors", icon: Server },
