@@ -13,7 +13,9 @@ import {
   Sun,
   Moon,
   Sparkles,
-  Compass
+  Compass,
+  PanelLeftOpen,
+  PanelLeftClose
 } from "lucide-react";
 
 export function PrismTopBar({
@@ -24,7 +26,9 @@ export function PrismTopBar({
   onSelectEnvironment,
   onOpenNewProjectModal,
   theme,
-  onToggleTheme
+  onToggleTheme,
+  sidebarCollapsed,
+  onToggleSidebar
 }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -46,8 +50,31 @@ export function PrismTopBar({
       padding: "0 24px",
       zIndex: 30
     }}>
-      {/* Left: Project & Environment Switchers (Project Mode) OR Title (Admin Mode) */}
+      {/* Left: Sidebar Toggle + Project & Environment Switchers */}
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        {/* Modern Sidebar Expander Button */}
+        <button
+          onClick={onToggleSidebar}
+          className="btn-ghost"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "36px",
+            height: "36px",
+            borderRadius: "9px",
+            background: sidebarCollapsed ? "rgba(236, 72, 153, 0.12)" : "rgba(255, 255, 255, 0.04)",
+            border: sidebarCollapsed ? "1px solid var(--prism-pink)" : "1px solid var(--border-subtle)",
+            color: sidebarCollapsed ? "var(--prism-pink)" : "var(--ink-secondary)",
+            cursor: "pointer",
+            transition: "all 0.15s ease",
+            boxShadow: sidebarCollapsed ? "0 0 12px rgba(236, 72, 153, 0.3)" : "none",
+            flexShrink: 0
+          }}
+          title={sidebarCollapsed ? "Expand Sidebar (⌘B)" : "Collapse Sidebar (⌘B)"}
+        >
+          {sidebarCollapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
+        </button>
         
         {/* Admin Mode Header */}
         {isAdmin && (

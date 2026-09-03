@@ -333,11 +333,18 @@ When the autonomous agent processes an inquiry, instead of static loading text, 
 
 ---
 
-## 10. Live Triage Board Priority & Radar Pulsing Beacon (`PrismSidebar.jsx`)
+## 10. Live Triage Board Priority & Modern Expander Suite (`PrismSidebar.jsx` & `PrismTopBar.jsx`)
 
 - **Top Priority Navigation:** Positioned as the #1 item in the project sidebar under `TRIAGE & MISSION CONTROL`.
 - **Live Radar Beacon Animation:**
   - Pulsing emerald radiant glow (`@keyframes liveTriagePulse`: `box-shadow: 0 0 22px rgba(16, 185, 129, 0.75)`).
   - Continuous radar ping beacon dot (`@keyframes radarPing`).
-- **Universal Sidebar Expand:** When the sidebar is collapsed to 70px icon mode, clicking **anywhere** on the sidebar body, background, or margins immediately expands it back to 240px.
+- **Modern Expander Suite (Visible Everywhere & Responsive):**
+  1. **Floating Edge Expander Tab:** When collapsed, a high-contrast circular button with gradient background, white chevron, and live radar beacon rests on the right border (`.modern-sidebar-floating-tab`), hovering with smooth scale & radiant aura.
+  2. **Footer Expander Dock:** Features a modern glassmorphic collapse pill with `PanelLeftClose` when expanded, and a prominent pink-accented `PanelLeftOpen` button when collapsed.
+  3. **Universal Top Bar Toggle Button:** A dedicated sidebar expander button in `PrismTopBar.jsx` allows effortless toggling from any header bar.
+  4. **Click-Anywhere Expansion:** Clicking anywhere on the collapsed sidebar body, background, or margins automatically expands it.
+  5. **Keyboard Shortcut:** `⌘B` / `Ctrl+B` toggles the sidebar on any platform.
+  6. **Universal Screen Fit:** Automatically adapts to screen dimensions—auto-collapsing on tablets and small laptops (≤ 1024px) to preserve maximum workspace clarity, with fixed full-height overlay on mobile devices (≤ 768px).
+
 

@@ -31,14 +31,25 @@ import {
   Kanban,
   BarChart3,
   ThumbsUp,
-  Plus
+  Plus,
+  PanelLeftClose,
+  PanelLeftOpen
 } from "lucide-react";
 import { BrandLogo } from "../BrandLogo";
 
-export function PrismSidebar({ activeProject, projects, onSelectProject }) {
+export function PrismSidebar({
+  activeProject,
+  projects,
+  onSelectProject,
+  collapsed: controlledCollapsed,
+  onToggleCollapse: controlledToggleCollapse
+}) {
   const location = useLocation();
   const navigate = useNavigate();
-  const [collapsed, setCollapsed] = useState(false);
+  const [localCollapsed, setLocalCollapsed] = useState(false);
+
+  const collapsed = controlledCollapsed !== undefined ? controlledCollapsed : localCollapsed;
+  const toggleCollapse = controlledToggleCollapse || (() => setLocalCollapsed(!localCollapsed));
 
   const isAdmin = location.pathname.startsWith("/admin");
   const projectKey = activeProject?.project_key || "BILLING";
@@ -142,9 +153,9 @@ export function PrismSidebar({ activeProject, projects, onSelectProject }) {
   return (
     <aside 
       onClick={() => {
-        if (collapsed) setCollapsed(false);
+        if (collapsed) toggleCollapse();
       }}
-      title={collapsed ? "Click anywhere to expand sidebar" : undefined}
+      title={collapsed ? "Click anywhere to expand sidebar (⌘B)" : undefined}
       style={{
         width: collapsed ? "70px" : "240px",
         minWidth: collapsed ? "70px" : "240px",
@@ -154,11 +165,44 @@ export function PrismSidebar({ activeProject, projects, onSelectProject }) {
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
-        transition: "width 0.2s var(--ease)",
+        transition: "width 0.22s cubic-bezier(0.4, 0, 0.2, 1)",
         zIndex: 40,
         userSelect: "none",
-        cursor: collapsed ? "pointer" : "default"
+        cursor: collapsed ? "pointer" : "default",
+        position: "relative"
       }}>
+      {/* Modern Floating Edge Expander Tab (Visibly prominent on right border when collapsed) */}
+      {collapsed && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleCollapse();
+          }}
+          className="modern-sidebar-floating-tab"
+          style={{
+            position: "absolute",
+            right: "-14px",
+            top: "76px",
+            width: "28px",
+            height: "28px",
+            borderRadius: "50%",
+            background: "var(--prism-gradient)",
+            border: "2px solid var(--bg-sidebar)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#fff",
+            cursor: "pointer",
+            boxShadow: "0 0 16px rgba(236, 72, 153, 0.6), 0 4px 12px rgba(0, 0, 0, 0.5)",
+            zIndex: 60,
+            transition: "transform 0.15s ease"
+          }}
+          title="Expand Sidebar (⌘B)"
+        >
+          <ChevronRight size={15} strokeWidth={2.5} />
+          <span className="radar-ping-dot" style={{ position: "absolute", top: "-2px", right: "-2px", width: "7px", height: "7px" }} />
+        </button>
+      )}
       {/* Top Brand Area */}
       <div>
         <div 
@@ -291,51 +335,99 @@ export function PrismSidebar({ activeProject, projects, onSelectProject }) {
         </div>
       </div>
 
-      {/* Bottom User Card & Collapse */}
+      {/* Modern Sidebar Footer with Polished Collapse/Expand Dock */}
       <div style={{
-        padding: "12px",
+        padding: collapsed ? "12px 10px" : "12px 14px",
         borderTop: "1px solid var(--border-subtle)",
-        background: "rgba(5, 8, 22, 0.4)",
+        background: "rgba(5, 8, 22, 0.5)",
+        backdropFilter: "blur(10px)",
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between"
+        justifyContent: collapsed ? "center" : "space-between",
+        gap: "8px"
       }}>
         {!collapsed ? (
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", overflow: "hidden" }}>
-            <div style={{
-              width: "32px",
-              height: "32px",
-              borderRadius: "8px",
-              background: "var(--prism-gradient)",
-              color: "#fff",
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", overflow: "hidden", minWidth: 0 }}>
+              <div style={{
+                width: "32px",
+                height: "32px",
+                borderRadius: "8px",
+                background: "var(--prism-gradient)",
+                color: "#fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "12px",
+                fontWeight: "700",
+                flexShrink: 0,
+                boxShadow: "0 0 10px var(--prism-glow)"
+              }}>
+                {isAdmin ? "SA" : "SJ"}
+              </div>
+              <div style={{ overflow: "hidden", minWidth: 0 }}>
+                <div style={{ fontSize: "12px", fontWeight: "600", color: "var(--ink-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {isAdmin ? "Super Administrator" : "Sarah Jones"}
+                </div>
+                <div className="mono" style={{ fontSize: "10px", color: "var(--ink-tertiary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {isAdmin ? "admin@sentrix.io" : "kbk@company.com"}
+                </div>
+              </div>
+            </div>
+
+            <button
+              className="btn-ghost"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleCollapse();
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                padding: "6px 9px",
+                borderRadius: "7px",
+                background: "rgba(255, 255, 255, 0.04)",
+                border: "1px solid var(--border-subtle)",
+                color: "var(--ink-secondary)",
+                fontSize: "11px",
+                fontWeight: "600",
+                cursor: "pointer",
+                flexShrink: 0,
+                transition: "all 0.15s ease"
+              }}
+              title="Collapse sidebar (⌘B)"
+            >
+              <PanelLeftClose size={14} />
+              <span>Collapse</span>
+            </button>
+          </>
+        ) : (
+          <button
+            className="btn-ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleCollapse();
+            }}
+            style={{
+              width: "42px",
+              height: "42px",
+              borderRadius: "10px",
+              background: "rgba(236, 72, 153, 0.12)",
+              border: "1.5px solid rgba(236, 72, 153, 0.5)",
+              color: "var(--prism-pink)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: "12px",
-              fontWeight: "700",
-              flexShrink: 0
-            }}>
-              {isAdmin ? "SA" : "SJ"}
-            </div>
-            <div style={{ overflow: "hidden" }}>
-              <div style={{ fontSize: "12px", fontWeight: "600", color: "var(--ink-primary)", whiteSpace: "nowrap" }}>
-                {isAdmin ? "Super Administrator" : "Sarah Jones"}
-              </div>
-              <div className="mono" style={{ fontSize: "10px", color: "var(--ink-tertiary)", whiteSpace: "nowrap" }}>
-                {isAdmin ? "admin@sentrix.io" : "kbk@company.com"}
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        <button
-          className="btn-ghost"
-          onClick={() => setCollapsed(!collapsed)}
-          style={{ padding: "6px" }}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-        </button>
+              cursor: "pointer",
+              boxShadow: "0 0 14px rgba(236, 72, 153, 0.35)",
+              transition: "all 0.15s ease"
+            }}
+            title="Expand sidebar (Click or press ⌘B)"
+          >
+            <PanelLeftOpen size={18} />
+          </button>
+        )}
       </div>
     </aside>
   );

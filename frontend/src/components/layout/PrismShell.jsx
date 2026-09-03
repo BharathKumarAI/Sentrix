@@ -15,14 +15,44 @@ export function PrismShell({
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem("prism_theme") || "dark";
   });
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    return window.innerWidth <= 1024;
+  });
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("prism_theme", theme);
   }, [theme]);
 
+  // Responsive screen fit: auto-collapse on tablet/laptop screens
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= 1024) {
+        setSidebarCollapsed(true);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Keyboard shortcut: Cmd+B / Ctrl+B to toggle sidebar expander
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        setSidebarCollapsed((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const handleToggleTheme = () => {
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  };
+
+  const handleToggleSidebar = () => {
+    setSidebarCollapsed((prev) => !prev);
   };
 
   return (
@@ -33,11 +63,13 @@ export function PrismShell({
       overflow: "hidden",
       background: "var(--bg-app)"
     }}>
-      {/* Fixed Collapsible Left Sidebar */}
+      {/* Fixed Collapsible Left Sidebar with Modern Expander */}
       <PrismSidebar
         projects={projects}
         activeProject={activeProject}
         onSelectProject={onSelectProject}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={handleToggleSidebar}
       />
 
       {/* Main Workspace Area */}
@@ -46,9 +78,10 @@ export function PrismShell({
         display: "flex",
         flexDirection: "column",
         height: "100vh",
-        overflow: "hidden"
+        overflow: "hidden",
+        minWidth: 0
       }}>
-        {/* Top Scope & Breadcrumb Bar */}
+        {/* Top Scope & Breadcrumb Bar with Modern Sidebar Toggle */}
         <PrismTopBar
           projects={projects}
           activeProject={activeProject}
@@ -58,6 +91,8 @@ export function PrismShell({
           onOpenNewProjectModal={onOpenNewProjectModal}
           theme={theme}
           onToggleTheme={handleToggleTheme}
+          sidebarCollapsed={sidebarCollapsed}
+          onToggleSidebar={handleToggleSidebar}
         />
 
         {/* Dynamic Full-Space Page Content */}
