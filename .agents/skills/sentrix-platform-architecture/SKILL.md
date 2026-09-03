@@ -361,14 +361,15 @@ When the autonomous agent processes an inquiry, instead of static loading text, 
 
 ---
 
-## 12. Extensibility & Developer Documentation (`DocsPage.jsx`)
+## 12. Extensibility & Developer Documentation (`DocsModal.jsx`)
 
-Accessible via `/docs`, `/admin/docs`, and `/p/:projectKey/docs`:
-1. **Adding New Tools:** Python Tool Broker definitions, parameter schemas, and read-only execution vs. mutating Action Proposal requirements.
-2. **Model Context Protocol (MCP):** Native stdio and SSE server integration, dynamic Gemini tool synthesis, and `mcp_config.json` specifications.
-3. **Datasource Connectors:** `BaseConnector` subclassing, credential encryption, and heartbeat probe methods.
-4. **Autonomous Agent Specifications:** Google ADK 2.8 on Gemini 2.5 Pro, OKF v2.0 correlation, and multi-turn SRE reasoning loops.
-5. **Interactive Live Tool Schema Validator:** In-browser JSON schema validation widget for testing custom tool definitions prior to production deployment.
+- **Platform-Level Modal Popup:** Documentation is treated as a global platform resource rather than a project tab. It opens as an interactive glassmorphic modal popup from anywhere on the platform (via the TopBar `Docs` button or Help popover) without displacing active investigation chat or triage sessions.
+- **Interactive Contents:**
+  1. **Adding New Tools:** Python Tool Broker definitions, parameter schemas, and read-only execution vs. mutating Action Proposal requirements.
+  2. **Model Context Protocol (MCP):** Native stdio and SSE server integration, dynamic Gemini tool synthesis, and `mcp_config.json` specifications.
+  3. **Datasource Connectors:** `BaseConnector` subclassing, credential encryption, and heartbeat probe methods.
+  4. **Autonomous Agent Specifications:** Google ADK 2.8 on Gemini 2.5 Pro, OKF v2.0 correlation, and multi-turn SRE reasoning loops.
+  5. **Interactive Live Tool Schema Validator:** In-browser JSON schema validation widget for testing custom tool definitions prior to production deployment.
 
 
 

@@ -104,7 +104,6 @@ export function PrismSidebar({
         { label: "Environments Matrix", path: `/p/${projectKey}/environments`, icon: Network },
         { label: "Parameter Studio", path: `/p/${projectKey}/parameters`, icon: Sliders },
         { label: "Settings & Instructions", path: `/p/${projectKey}/settings`, icon: Settings },
-        { label: "Extensibility Docs", path: `/p/${projectKey}/docs`, icon: BookOpen, badge: "MCP/ADK", badgeColor: "badge-teal" },
       ]
     }
   ];

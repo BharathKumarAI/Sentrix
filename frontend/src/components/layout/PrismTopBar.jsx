@@ -34,6 +34,7 @@ import {
   MessageSquarePlus
 } from "lucide-react";
 import { FrameworkFeedbackModal } from "../FrameworkFeedbackModal";
+import { DocsModal } from "../DocsModal";
 
 export function PrismTopBar({
   projects = [],
@@ -55,6 +56,7 @@ export function PrismTopBar({
   const [searchQuery, setSearchQuery] = useState("");
   const [readNotifications, setReadNotifications] = useState([]);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showDocsModal, setShowDocsModal] = useState(false);
   const topbarRef = useRef(null);
 
   const isAdmin = location.pathname.startsWith("/admin");
@@ -481,11 +483,11 @@ export function PrismTopBar({
           </button>
         )}
 
-        {/* EXTENSIBILITY DOCS BUTTON */}
+        {/* EXTENSIBILITY DOCS POPUP BUTTON */}
         <button
           onClick={() => {
             setActiveModal(null);
-            navigate(isAdmin ? "/admin/docs" : `/p/${projectKey}/docs`);
+            setShowDocsModal(true);
           }}
           className="btn-ghost"
           style={{
@@ -494,17 +496,17 @@ export function PrismTopBar({
             fontWeight: "600",
             gap: "6px",
             borderRadius: "8px",
-            color: location.pathname.includes("/docs") ? "var(--accent-teal)" : "var(--ink-secondary)",
-            background: location.pathname.includes("/docs") ? "rgba(16, 185, 129, 0.12)" : "rgba(255, 255, 255, 0.03)",
-            border: location.pathname.includes("/docs") ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid var(--border-subtle)",
+            color: showDocsModal ? "var(--accent-teal)" : "var(--ink-secondary)",
+            background: showDocsModal ? "rgba(16, 185, 129, 0.12)" : "rgba(255, 255, 255, 0.03)",
+            border: showDocsModal ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid var(--border-subtle)",
             display: "flex",
             alignItems: "center",
             cursor: "pointer",
             transition: "all 0.15s ease"
           }}
-          title="Extensibility Documentation (Tools, MCP, Connectors, Agents)"
+          title="Open Platform Documentation & Extensibility Specs (Popup)"
         >
-          <BookOpen size={14} color={location.pathname.includes("/docs") ? "var(--accent-teal)" : "var(--ink-secondary)"} />
+          <BookOpen size={14} color={showDocsModal ? "var(--accent-teal)" : "var(--ink-secondary)"} />
           <span>Docs</span>
         </button>
 
@@ -732,14 +734,14 @@ export function PrismTopBar({
 
               <button
                 onClick={() => {
-                  navigate(isAdmin ? "/admin/docs" : `/p/${projectKey}/docs`);
                   setActiveModal(null);
+                  setShowDocsModal(true);
                 }}
                 className="btn-primary"
                 style={{ width: "100%", justifyContent: "center", fontSize: "11.5px", padding: "7px", gap: "6px" }}
               >
                 <BookOpen size={13} />
-                Developer & Extensibility Docs
+                Developer & Extensibility Docs (Popup)
               </button>
             </div>
           )}
@@ -925,6 +927,12 @@ export function PrismTopBar({
         onClose={() => setShowFeedbackModal(false)}
         activeProject={activeProject}
         activeEnvironment={activeEnvironment}
+      />
+
+      {/* PLATFORM EXTENSIBILITY & DEVELOPER DOCS MODAL */}
+      <DocsModal
+        isOpen={showDocsModal}
+        onClose={() => setShowDocsModal(false)}
       />
     </header>
   );

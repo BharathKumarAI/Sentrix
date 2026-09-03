@@ -200,8 +200,8 @@ In [AutoTriageHub.jsx](file:///Users/kbk/Desktop/Prism/frontend/src/components/A
   - Supports reporting framework-level issues (chat stream disconnects, broker failures), submitting feature requests (new connectors, custom skills), and reporting performance lags.
   - Automatically captures environment context (Project key, dynamic environment name, engineer identity, browser/OS user-agent, ISO timestamp).
   - Dispatches feedback, generates an immediate tracking code (`STX-FEEDBACK-xxxx`), and stores it in persistent logs.
-- **Extensibility & Developer Documentation Hub (`DocsPage.jsx`):**
-  - Integrated into `/docs`, `/admin/docs`, `/p/:projectKey/docs`, and linked directly from the TopBar Help Popover.
+- **Platform-Level Extensibility Documentation Modal (`DocsModal.jsx`):**
+  - Designed as a platform-wide modal popup rather than a project tab. Accessible anywhere via the TopBar `Docs` button and Help popover.
   - Contains full code recipes and schemas for:
     1. **Adding Custom Python Tools:** Tool Broker registration, parameters JSON schema, and read-only vs. action proposal governance.
     2. **Model Context Protocol (MCP):** Anthropic & Google ADK standard stdio/SSE transports, dynamic Gemini tool synthesis, and `mcp_config.json`.
