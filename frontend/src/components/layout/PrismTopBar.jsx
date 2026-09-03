@@ -481,6 +481,60 @@ export function PrismTopBar({
           </button>
         )}
 
+        {/* EXTENSIBILITY DOCS BUTTON */}
+        <button
+          onClick={() => {
+            setActiveModal(null);
+            navigate(isAdmin ? "/admin/docs" : `/p/${projectKey}/docs`);
+          }}
+          className="btn-ghost"
+          style={{
+            padding: "5px 10px",
+            fontSize: "12px",
+            fontWeight: "600",
+            gap: "6px",
+            borderRadius: "8px",
+            color: location.pathname.includes("/docs") ? "var(--accent-teal)" : "var(--ink-secondary)",
+            background: location.pathname.includes("/docs") ? "rgba(16, 185, 129, 0.12)" : "rgba(255, 255, 255, 0.03)",
+            border: location.pathname.includes("/docs") ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid var(--border-subtle)",
+            display: "flex",
+            alignItems: "center",
+            cursor: "pointer",
+            transition: "all 0.15s ease"
+          }}
+          title="Extensibility Documentation (Tools, MCP, Connectors, Agents)"
+        >
+          <BookOpen size={14} color={location.pathname.includes("/docs") ? "var(--accent-teal)" : "var(--ink-secondary)"} />
+          <span>Docs</span>
+        </button>
+
+        {/* FRAMEWORK FEEDBACK & ISSUE REPORT BUTTON */}
+        <button
+          onClick={() => {
+            setActiveModal(null);
+            setShowFeedbackModal(true);
+          }}
+          className="btn-ghost"
+          style={{
+            padding: "5px 11px",
+            fontSize: "12px",
+            fontWeight: "600",
+            gap: "6px",
+            borderRadius: "8px",
+            border: "1px solid rgba(236, 72, 153, 0.35)",
+            background: "rgba(236, 72, 153, 0.08)",
+            color: "var(--prism-pink)",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            transition: "all 0.15s ease"
+          }}
+          title="Report framework issue, chat problem, or submit new feature request"
+        >
+          <MessageSquarePlus size={14} />
+          <span>Feedback</span>
+        </button>
+
         {/* Global Theme Switcher (Light / Dark) */}
         <button
           className="btn-ghost"
@@ -762,6 +816,8 @@ export function PrismTopBar({
             </div>
           )}
         </div>
+        {/* Subtle Vertical Divider */}
+        <div style={{ width: "1px", height: "20px", background: "var(--border-subtle)", margin: "0 2px" }} />
 
         {/* USER PILL AVATAR WITH INTERACTIVE PROFILE DETAILS POPOVER */}
         <div style={{ position: "relative" }}>
@@ -819,32 +875,28 @@ export function PrismTopBar({
                 gap: "12px"
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "10px" }}>
-                <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "var(--prism-gradient)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", fontSize: "13px" }}>
-                  {isAdmin ? "SA" : "SJ"}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--border-subtle)", paddingBottom: "8px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <User size={15} color="var(--prism-pink)" />
+                  <span style={{ fontSize: "13px", fontWeight: "700", color: "var(--ink-primary)" }}>
+                    Engineer Identity & Delegation Session
+                  </span>
                 </div>
-                <div>
-                  <div style={{ fontSize: "13.5px", fontWeight: "700", color: "var(--ink-primary)" }}>
-                    {isAdmin ? "Super Administrator" : "Sarah Jones"}
-                  </div>
-                  <div className="mono" style={{ fontSize: "10.5px", color: "var(--ink-tertiary)" }}>
-                    {isAdmin ? "admin@sentrix.io" : "kbk@company.com"}
-                  </div>
-                </div>
+                <span className="badge badge-teal" style={{ fontSize: "9px" }}>Authenticated</span>
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "11.5px", background: "rgba(0,0,0,0.25)", padding: "10px", borderRadius: "8px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "11.5px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ color: "var(--ink-tertiary)" }}>Role:</span>
-                  <span style={{ color: "var(--ink-primary)", fontWeight: "600" }}>{isAdmin ? "Platform Owner" : "Staff SRE Commander"}</span>
+                  <span style={{ color: "var(--ink-tertiary)" }}>Identity:</span>
+                  <span style={{ color: "var(--ink-primary)", fontWeight: "600" }}>{isAdmin ? "admin@company.com" : "kbk@company.com"}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "var(--ink-tertiary)" }}>Role Authority:</span>
+                  <span style={{ color: "var(--prism-pink)", fontWeight: "600" }}>{isAdmin ? "Platform Lead Admin" : "Staff SRE Commander"}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ color: "var(--ink-tertiary)" }}>Delegation Token:</span>
                   <span className="mono badge badge-magenta" style={{ fontSize: "9px" }}>Valid 6h 42m</span>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ color: "var(--ink-tertiary)" }}>Assigned Squad:</span>
-                  <span style={{ color: "var(--accent-teal)", fontWeight: "600" }}>Payments Core Team</span>
                 </div>
               </div>
 
@@ -865,53 +917,6 @@ export function PrismTopBar({
             </div>
           )}
         </div>
-
-        {/* EXTENSIBILITY DOCS BUTTON */}
-        <button
-          onClick={() => {
-            setActiveModal(null);
-            navigate(isAdmin ? "/admin/docs" : `/p/${projectKey}/docs`);
-          }}
-          className="btn-ghost"
-          style={{
-            padding: "8px",
-            background: location.pathname.includes("/docs") ? "rgba(16, 185, 129, 0.15)" : "transparent",
-            color: location.pathname.includes("/docs") ? "var(--accent-teal)" : "var(--ink-secondary)",
-            borderRadius: "8px",
-            display: "flex",
-            alignItems: "center"
-          }}
-          title="Extensibility Documentation (Tools, MCP, Connectors, Agents)"
-        >
-          <BookOpen size={17} />
-        </button>
-
-        {/* FRAMEWORK FEEDBACK & ISSUE REPORT BUTTON */}
-        <button
-          onClick={() => {
-            setActiveModal(null);
-            setShowFeedbackModal(true);
-          }}
-          className="btn-ghost"
-          style={{
-            padding: "5px 11px",
-            fontSize: "12px",
-            fontWeight: "600",
-            gap: "6px",
-            borderRadius: "8px",
-            border: "1px solid rgba(236, 72, 153, 0.35)",
-            background: "rgba(236, 72, 153, 0.08)",
-            color: "var(--prism-pink)",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            transition: "all 0.15s ease"
-          }}
-          title="Report framework issue, chat problem, or submit new feature request"
-        >
-          <MessageSquarePlus size={14} />
-          <span>Feedback</span>
-        </button>
       </div>
 
       {/* FRAMEWORK LEVEL FEEDBACK & BUG REPORT MODAL */}
