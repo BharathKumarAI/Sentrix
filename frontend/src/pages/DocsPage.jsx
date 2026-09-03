@@ -19,7 +19,10 @@ import {
   AlertTriangle,
   Play,
   FileCode,
-  Network
+  Network,
+  Compass,
+  MessageSquare,
+  Activity
 } from "lucide-react";
 
 export function DocsPage({ activeProject }) {
@@ -27,7 +30,7 @@ export function DocsPage({ activeProject }) {
   const navigate = useNavigate();
   const currentKey = projectKey || activeProject?.project_key || "BILLING";
 
-  const [activeTab, setActiveTab] = useState("tools"); // "tools" | "mcp" | "connectors" | "agents" | "tester"
+  const [activeTab, setActiveTab] = useState("how-to-use"); // "how-to-use" | "how-it-works" | "how-to-request" | "tools-connectors" | "mcp" | "tester"
   const [searchFilter, setSearchFilter] = useState("");
   const [copiedSection, setCopiedSection] = useState(null);
 
@@ -124,16 +127,17 @@ export function DocsPage({ activeProject }) {
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
               <span style={{ fontSize: "11.5px", fontWeight: "700", color: "var(--ink-tertiary)", textTransform: "uppercase" }}>
-                Platform Developer Documentation
+                Platform Developer & Operational Documentation
               </span>
               <span className="badge badge-magenta">ADK 2.8 Architecture</span>
-              <span className="badge badge-teal">MCP Ready</span>
+              <span className="badge badge-teal">Gemini 2.5 Pro</span>
+              <span className="badge badge-violet">MCP Ready</span>
             </div>
             <h1 style={{ fontSize: "20px", fontWeight: "700", color: "var(--ink-primary)", marginTop: "4px", margin: 0 }}>
-              Sentrix SRE Extensibility & Integration Guide
+              Sentrix Platform Knowledge Base & Usage Guide
             </h1>
             <p style={{ fontSize: "12.5px", color: "var(--ink-secondary)", marginTop: "4px", margin: 0 }}>
-              Comprehensive blueprints and recipes for adding new Tools, MCP servers, Datasource Connectors, and Autonomous SRE Agents.
+              Comprehensive operational tour, system architecture breakdown, prompt recipes, and developer extensibility blueprints.
             </p>
           </div>
         </div>
@@ -143,7 +147,7 @@ export function DocsPage({ activeProject }) {
           <Search size={14} color="var(--ink-tertiary)" style={{ position: "absolute", left: "10px", top: "10px" }} />
           <input
             type="text"
-            placeholder="Search guides, tools, MCP..."
+            placeholder="Search guides, recipes, tools..."
             value={searchFilter}
             onChange={(e) => setSearchFilter(e.target.value)}
             style={{
@@ -169,11 +173,12 @@ export function DocsPage({ activeProject }) {
         flexWrap: "wrap"
       }}>
         {[
-          { id: "tools", label: "Adding New Tools", icon: Wrench, badge: "Tool Broker" },
-          { id: "mcp", label: "Model Context Protocol (MCP)", icon: Network, badge: "Claude & Gemini" },
-          { id: "connectors", label: "Datasource Connectors", icon: Database, badge: "Zero-Trust" },
-          { id: "agents", label: "Autonomous Agent Specs", icon: Bot, badge: "ADK 2.8" },
-          { id: "tester", label: "Tool Schema Tester", icon: Code2, badge: "Interactive" }
+          { id: "how-to-use", label: "How to Use the App", icon: Compass, badge: "User Guide" },
+          { id: "how-it-works", label: "How It Works", icon: Activity, badge: "Architecture" },
+          { id: "how-to-request", label: "How to Request & Prompt", icon: MessageSquare, badge: "Inquiry Guide" },
+          { id: "tools-connectors", label: "Adding Tools & Connectors", icon: Wrench, badge: "Extensibility" },
+          { id: "mcp", label: "Model Context Protocol (MCP)", icon: Network, badge: "Standards" },
+          { id: "tester", label: "Live Schema Tester", icon: Code2, badge: "Interactive" }
         ].map((tab) => (
           <button
             key={tab.id}
@@ -201,268 +206,217 @@ export function DocsPage({ activeProject }) {
         ))}
       </div>
 
-      {/* =========================================================================
-         TAB 1: ADDING NEW TOOLS
-         ========================================================================= */}
-      {activeTab === "tools" && (
+      {/* TAB 1: HOW TO USE */}
+      {activeTab === "how-to-use" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           <div className="prism-card" style={{ padding: "24px" }}>
             <h3 style={{ fontSize: "16px", color: "var(--ink-primary)", margin: 0 }}>
-              How to Add a New Tool to Sentrix
+              End-to-End Operational Workflow
             </h3>
             <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "6px", lineHeight: 1.6 }}>
-              All diagnostics executed by the autonomous SRE agent are mediated by the <strong>Tool Broker</strong>. Tools follow a strict read-only execution model; any mutating action (scaling, restarts, write comments) requires staging a <strong>Cryptographic Action Proposal</strong>.
+              Follow this step-by-step tour to triage active incident tickets, launch AI investigations, and safely apply cryptographic remediation proposals:
             </p>
 
-            <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div style={{ fontSize: "13px", fontWeight: "700", color: "var(--accent-teal)" }}>
-                Step 1: Define the Python Tool Function & Schema
-              </div>
-              <p style={{ fontSize: "12.5px", color: "var(--ink-secondary)", margin: 0 }}>
-                Create your tool implementation in <code>backend/connectors/custom_tools.py</code>:
-              </p>
-
-              <div style={{ position: "relative" }}>
-                <pre className="prism-card mono" style={{
-                  padding: "16px",
-                  background: "rgba(0, 0, 0, 0.4)",
-                  border: "1px solid var(--border-subtle)",
-                  fontSize: "12px",
-                  color: "var(--ink-primary)",
-                  overflowX: "auto"
-                }}>
-{`from typing import Dict, Any
-from backend.connectors.base_connector import ToolBroker, ToolDefinition
-
-# 1. Implement tool execution logic
-async def execute_redis_slowlog(project_id: str, project_env: str, limit: int = 10) -> Dict[str, Any]:
-    """Retrieves top slow queries from the project's Redis instance."""
-    # Resolve concrete Redis connection for the user's dynamic environment
-    connector = await ToolBroker.resolve(project_id, project_env, "CACHE")
-    entries = await connector.get_slowlog(limit=limit)
-    return {
-        "status": "SUCCESS",
-        "slowlog_entries": entries,
-        "count": len(entries)
-    }
-
-# 2. Register tool schema with the Tool Broker
-ToolBroker.register_tool(
-    ToolDefinition(
-        name="get_redis_slowlog",
-        description="Inspects Redis slowlog to isolate unindexed cache queries and key expirations.",
-        parameters={
-            "type": "object",
-            "properties": {
-                "limit": {"type": "integer", "default": 10, "description": "Number of slowlog entries to fetch"}
-            }
-        },
-        handler=execute_redis_slowlog,
-        is_read_only=True
-    )
-)`}
-                </pre>
-                <button
-                  onClick={() => handleCopy(`from typing import Dict, Any\nfrom backend.connectors.base_connector import ToolBroker, ToolDefinition\n...`, "step1")}
-                  className="btn-ghost"
-                  style={{ position: "absolute", top: "12px", right: "12px", padding: "4px 8px", fontSize: "11px" }}
-                >
-                  {copiedSection === "step1" ? <Check size={13} color="var(--accent-teal)" /> : <Copy size={13} />}
-                </button>
+            <div style={{ marginTop: "16px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+              <div className="prism-card" style={{ padding: "18px", background: "rgba(255, 255, 255, 0.02)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span className="mono badge badge-magenta">Step 1</span>
+                  <strong style={{ fontSize: "13.5px", color: "var(--ink-primary)" }}>Live Triage Board</strong>
+                </div>
+                <p style={{ fontSize: "12.5px", color: "var(--ink-secondary)", marginTop: "8px", lineHeight: 1.5 }}>
+                  Monitor prioritized incident queues. Tickets display auto-triage status, confidence score, and identified root cause. Click any ticket to open the full Evidence Locker.
+                </p>
               </div>
 
-              <div style={{ fontSize: "13px", fontWeight: "700", color: "var(--prism-pink)", marginTop: "10px" }}>
-                Step 2: Bind the Tool to the Project Setup Studio
+              <div className="prism-card" style={{ padding: "18px", background: "rgba(255, 255, 255, 0.02)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span className="mono badge badge-teal">Step 2</span>
+                  <strong style={{ fontSize: "13.5px", color: "var(--ink-primary)" }}>Autonomous Investigation Stream</strong>
+                </div>
+                <p style={{ fontSize: "12.5px", color: "var(--ink-secondary)", marginTop: "8px", lineHeight: 1.5 }}>
+                  Converse with the SRE Agent. Inspect live telemetry anomalies, review pg_stat_activity query tables, and track the agent's real-time thinking progress.
+                </p>
               </div>
-              <p style={{ fontSize: "12.5px", color: "var(--ink-secondary)", margin: 0 }}>
-                Tools automatically surface in <code>ProjectSetupStudioPage.jsx</code> under <strong>Tools & Skills</strong>, allowing project engineers to toggle them per project with 1 click.
-              </p>
+
+              <div className="prism-card" style={{ padding: "18px", background: "rgba(255, 255, 255, 0.02)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span className="mono badge badge-violet">Step 3</span>
+                  <strong style={{ fontSize: "13.5px", color: "var(--ink-primary)" }}>Cryptographic Action Proposals</strong>
+                </div>
+                <p style={{ fontSize: "12.5px", color: "var(--ink-secondary)", marginTop: "8px", lineHeight: 1.5 }}>
+                  When a remediation is staged, review the command or code patch. Authorize execution using your delegated identity token (HMAC-SHA256 signed).
+                </p>
+              </div>
+
+              <div className="prism-card" style={{ padding: "18px", background: "rgba(255, 255, 255, 0.02)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span className="mono badge badge-amber">Step 4</span>
+                  <strong style={{ fontSize: "13.5px", color: "var(--ink-primary)" }}>Project Setup Studio</strong>
+                </div>
+                <p style={{ fontSize: "12.5px", color: "var(--ink-secondary)", marginTop: "8px", lineHeight: 1.5 }}>
+                  Configure Jira JQL polling cadence, map dynamic environments to tool endpoints, upload incident runbooks into OKF v2.0, and customize system directives.
+                </p>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* =========================================================================
-         TAB 2: MODEL CONTEXT PROTOCOL (MCP)
-         ========================================================================= */}
-      {activeTab === "mcp" && (
+      {/* TAB 2: HOW IT WORKS */}
+      {activeTab === "how-it-works" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           <div className="prism-card" style={{ padding: "24px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <Network size={20} color="var(--accent-teal)" />
-              <h3 style={{ fontSize: "16px", color: "var(--ink-primary)", margin: 0 }}>
-                Model Context Protocol (MCP) Integration
-              </h3>
-            </div>
+            <h3 style={{ fontSize: "16px", color: "var(--ink-primary)", margin: 0 }}>
+              System Architecture & Core Engine
+            </h3>
             <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "6px", lineHeight: 1.6 }}>
-              Sentrix natively supports Anthropic and Google ADK <strong>Model Context Protocol (MCP)</strong> servers. MCP exposes standardized tool discovery, resources, and live telemetry over standard I/O (stdio) or Server-Sent Events (SSE).
+              Sentrix uses Google ADK 2.8 on Gemini 2.5 Pro with strict zero-trust isolation:
             </p>
 
             <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div style={{ fontSize: "13px", fontWeight: "700", color: "var(--ink-primary)" }}>
-                Configuring an MCP Server in Sentrix
+              <div className="prism-card" style={{ padding: "16px", borderLeft: "3px solid var(--prism-pink)" }}>
+                <h4 style={{ fontSize: "13.5px", color: "var(--prism-pink)", margin: 0 }}>1. Continuous Ingestion Loop</h4>
+                <p style={{ fontSize: "12.5px", color: "var(--ink-secondary)", marginTop: "4px" }}>
+                  FastAPI backend polls Jira & ServiceNow every 30s, classifies priority, and triggers autonomous diagnostic flows.
+                </p>
               </div>
-              <p style={{ fontSize: "12.5px", color: "var(--ink-secondary)", margin: 0 }}>
-                Add your MCP server definition into <code>mcp_config.json</code>:
-              </p>
+              <div className="prism-card" style={{ padding: "16px", borderLeft: "3px solid var(--accent-teal)" }}>
+                <h4 style={{ fontSize: "13.5px", color: "var(--accent-teal)", margin: 0 }}>2. Zero-Trust Tool Broker</h4>
+                <p style={{ fontSize: "12.5px", color: "var(--ink-secondary)", marginTop: "4px" }}>
+                  All queries to PostgreSQL, Datadog APM, Splunk, and Kubernetes are strictly read-only and audited.
+                </p>
+              </div>
+              <div className="prism-card" style={{ padding: "16px", borderLeft: "3px solid var(--accent-violet)" }}>
+                <h4 style={{ fontSize: "13.5px", color: "var(--accent-violet)", margin: 0 }}>3. Open Knowledge Fabric (OKF v2.0)</h4>
+                <p style={{ fontSize: "12.5px", color: "var(--ink-secondary)", marginTop: "4px" }}>
+                  148+ historical incident precedents vector-matched to current telemetry signatures to calculate fix confidence scores.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-              <div style={{ position: "relative" }}>
-                <pre className="prism-card mono" style={{
-                  padding: "16px",
-                  background: "rgba(0, 0, 0, 0.4)",
-                  border: "1px solid var(--border-subtle)",
-                  fontSize: "12px",
-                  color: "var(--ink-primary)",
-                  overflowX: "auto"
-                }}>
+      {/* TAB 3: HOW TO REQUEST */}
+      {activeTab === "how-to-request" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div className="prism-card" style={{ padding: "24px" }}>
+            <h3 style={{ fontSize: "16px", color: "var(--ink-primary)", margin: 0 }}>
+              Agent Prompting & Inquiry Recipes
+            </h3>
+            <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "6px" }}>
+              Use these tested recipes to trigger specific tool workflows in the chat:
+            </p>
+
+            <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "14px" }}>
+              {[
+                { title: "📊 Telemetry Anomaly & Error Graph", text: "Show telemetry anomaly graph with p99 latency spikes and error rate volume", desc: "Renders SVG dual-curve latency & error volume chart via Datadog APM" },
+                { title: "🐘 Database Locks & Connection Pool", text: "Query database for active locks, blocked transactions, and HikariCP connection pool health", desc: "Interrogates pg_stat_activity and renders interactive query data table" },
+                { title: "☸️ Kubernetes Pod Crash Loops", text: "Check Kubernetes worker pod health, restart counts, and show recent container crash logs", desc: "Interrogates Kubernetes pods in project namespace and isolates stack traces" },
+                { title: "📋 Executive RCA Report", text: "Synthesize root cause analysis with timeline of events and stage remediation proposals", desc: "Renders Triage Report card with verified RCA, timeline, and 1-click action proposals" }
+              ].map((rec, idx) => (
+                <div key={idx} className="prism-card" style={{ padding: "16px", background: "rgba(255, 255, 255, 0.02)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <strong style={{ fontSize: "13px", color: "var(--ink-primary)" }}>{rec.title}</strong>
+                    <button
+                      onClick={() => handleCopy(rec.text, `page-rec-${idx}`)}
+                      className="btn-ghost"
+                      style={{ fontSize: "11px", padding: "3px 8px" }}
+                    >
+                      {copiedSection === `page-rec-${idx}` ? <Check size={12} color="var(--accent-teal)" /> : <Copy size={12} />}
+                    </button>
+                  </div>
+                  <code className="mono" style={{ display: "block", marginTop: "8px", fontSize: "12px", color: "var(--prism-pink)", background: "rgba(0,0,0,0.35)", padding: "8px 12px", borderRadius: "6px" }}>
+                    "{rec.text}"
+                  </code>
+                  <p style={{ fontSize: "12px", color: "var(--ink-secondary)", marginTop: "6px", margin: 0 }}>
+                    {rec.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: ADDING TOOLS & CONNECTORS */}
+      {activeTab === "tools-connectors" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div className="prism-card" style={{ padding: "24px" }}>
+            <h3 style={{ fontSize: "16px", color: "var(--ink-primary)", margin: 0 }}>
+              Adding New Tools & Datasource Connectors
+            </h3>
+            <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "6px", lineHeight: 1.6 }}>
+              All diagnostics are mediated by the Tool Broker. Define tool handlers in Python and register definitions:
+            </p>
+
+            <div style={{ marginTop: "16px", position: "relative" }}>
+              <pre className="prism-card mono" style={{
+                padding: "16px",
+                background: "rgba(0, 0, 0, 0.4)",
+                border: "1px solid var(--border-subtle)",
+                fontSize: "12px",
+                color: "var(--ink-primary)",
+                overflowX: "auto"
+              }}>
+{`from backend.connectors.base_connector import ToolBroker, ToolDefinition
+
+async def execute_redis_slowlog(project_id: str, project_env: str, limit: int = 10):
+    connector = await ToolBroker.resolve(project_id, project_env, "CACHE")
+    entries = await connector.get_slowlog(limit=limit)
+    return {"status": "SUCCESS", "slowlog_entries": entries}
+
+ToolBroker.register_tool(
+    ToolDefinition(
+        name="get_redis_slowlog",
+        description="Inspects Redis slowlog for unindexed queries.",
+        parameters={"type": "object", "properties": {"limit": {"type": "integer", "default": 10}}},
+        handler=execute_redis_slowlog,
+        is_read_only=True
+    )
+)`}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5: MCP */}
+      {activeTab === "mcp" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div className="prism-card" style={{ padding: "24px" }}>
+            <h3 style={{ fontSize: "16px", color: "var(--ink-primary)", margin: 0 }}>
+              Model Context Protocol (MCP) Standards
+            </h3>
+            <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "6px" }}>
+              Add MCP servers to <code>mcp_config.json</code> to expose tools directly to Gemini 2.5 Pro:
+            </p>
+
+            <div style={{ marginTop: "16px", position: "relative" }}>
+              <pre className="prism-card mono" style={{
+                padding: "16px",
+                background: "rgba(0, 0, 0, 0.4)",
+                border: "1px solid var(--border-subtle)",
+                fontSize: "12px",
+                color: "var(--ink-primary)",
+                overflowX: "auto"
+              }}>
 {`{
   "mcpServers": {
     "kubernetes-operator": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-kubernetes"],
-      "env": {
-        "KUBECONFIG": "/etc/sentrix/kubeconfig.yaml"
-      }
-    },
-    "postgres-diagnostics": {
-      "command": "python",
-      "args": ["-m", "sentrix_mcp_postgres"],
-      "env": {
-        "DATABASE_URL": "postgresql://sentrix_readonly@billing-db:5432/billing"
-      }
+      "env": { "KUBECONFIG": "/etc/sentrix/kubeconfig.yaml" }
     }
   }
 }`}
-                </pre>
-                <button
-                  onClick={() => handleCopy(`{\n  "mcpServers": {\n    "kubernetes-operator": {\n...`, "mcpConfig")}
-                  className="btn-ghost"
-                  style={{ position: "absolute", top: "12px", right: "12px", padding: "4px 8px", fontSize: "11px" }}
-                >
-                  {copiedSection === "mcpConfig" ? <Check size={13} color="var(--accent-teal)" /> : <Copy size={13} />}
-                </button>
-              </div>
-
-              <div style={{ display: "flex", gap: "10px", alignItems: "center", padding: "12px", background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: "8px" }}>
-                <CheckCircle2 size={16} color="var(--accent-teal)" />
-                <span style={{ fontSize: "12px", color: "var(--ink-primary)" }}>
-                  Sentrix automatically synthesizes Gemini function declarations from MCP server definitions at runtime without manual code edits.
-                </span>
-              </div>
+              </pre>
             </div>
           </div>
         </div>
       )}
 
-      {/* =========================================================================
-         TAB 3: DATASOURCE CONNECTORS
-         ========================================================================= */}
-      {activeTab === "connectors" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          <div className="prism-card" style={{ padding: "24px" }}>
-            <h3 style={{ fontSize: "16px", color: "var(--ink-primary)", margin: 0 }}>
-              Creating a Custom Datasource Connector
-            </h3>
-            <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "6px", lineHeight: 1.6 }}>
-              All infrastructure integrations inherit from <code>BaseConnector</code>. Connectors support zero-trust credential encryption, probe testing, and automatic mapping to dynamic project environments.
-            </p>
-
-            <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div style={{ fontSize: "13px", fontWeight: "700", color: "var(--accent-violet)" }}>
-                BaseConnector Architecture Pattern
-              </div>
-
-              <div style={{ position: "relative" }}>
-                <pre className="prism-card mono" style={{
-                  padding: "16px",
-                  background: "rgba(0, 0, 0, 0.4)",
-                  border: "1px solid var(--border-subtle)",
-                  fontSize: "12px",
-                  color: "var(--ink-primary)",
-                  overflowX: "auto"
-                }}>
-{`from backend.connectors.base_connector import BaseConnector, ProbeResult
-
-class SplunkLogConnector(BaseConnector):
-    def __init__(self, endpoint: str, auth_token: str):
-        super().__init__(connector_type="OBSERVABILITY")
-        self.endpoint = endpoint
-        self.auth_token = auth_token
-
-    async def probe(self) -> ProbeResult:
-        """Executes lightweight heartbeat probe (< 50ms) to test connectivity."""
-        try:
-            latency = await self._ping()
-            return ProbeResult(success=True, latency_ms=latency, message="Splunk REST API 200 OK")
-        except Exception as e:
-            return ProbeResult(success=False, error=str(e))
-
-    async def query_logs(self, query: str, time_range: str = "-15m"):
-        """Read-only log search execution."""
-        return await self._execute_search(query, time_range)`}
-                </pre>
-                <button
-                  onClick={() => handleCopy(`from backend.connectors.base_connector import BaseConnector, ProbeResult...`, "connectorCode")}
-                  className="btn-ghost"
-                  style={{ position: "absolute", top: "12px", right: "12px", padding: "4px 8px", fontSize: "11px" }}
-                >
-                  {copiedSection === "connectorCode" ? <Check size={13} color="var(--accent-teal)" /> : <Copy size={13} />}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* =========================================================================
-         TAB 4: AGENT DOCUMENTATION
-         ========================================================================= */}
-      {activeTab === "agents" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          <div className="prism-card" style={{ padding: "24px" }}>
-            <h3 style={{ fontSize: "16px", color: "var(--ink-primary)", margin: 0 }}>
-              Google ADK 2.8 Autonomous SRE Agent Architecture
-            </h3>
-            <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "6px", lineHeight: 1.6 }}>
-              Sentrix agents run on <strong>Google ADK 2.8</strong> utilizing <strong>Gemini 2.5 Pro</strong>. Agents execute iterative reasoning loops, query live tool conduits, correlate with OKF v2.0 incident precedents, and generate human-in-the-loop action proposals.
-            </p>
-
-            <div style={{ marginTop: "16px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-              <div className="prism-card" style={{ padding: "16px", background: "rgba(255, 255, 255, 0.02)" }}>
-                <h4 style={{ fontSize: "13px", color: "var(--prism-pink)", margin: 0 }}>1. Observation Phase</h4>
-                <p style={{ fontSize: "12px", color: "var(--ink-secondary)", marginTop: "6px" }}>
-                  Polls Jira queues and ServiceNow incident tables every 30s. Extracts P1/P2 tickets, affected CMDB microservices, and stack traces.
-                </p>
-              </div>
-
-              <div className="prism-card" style={{ padding: "16px", background: "rgba(255, 255, 255, 0.02)" }}>
-                <h4 style={{ fontSize: "13px", color: "var(--accent-teal)", margin: 0 }}>2. Tool Broker Dispatch</h4>
-                <p style={{ fontSize: "12px", color: "var(--ink-secondary)", marginTop: "6px" }}>
-                  Dispatches parallel queries across PostgreSQL, Datadog APM, Splunk, and Kubernetes pods to capture lock contention and crash loops.
-                </p>
-              </div>
-
-              <div className="prism-card" style={{ padding: "16px", background: "rgba(255, 255, 255, 0.02)" }}>
-                <h4 style={{ fontSize: "13px", color: "var(--accent-violet)", margin: 0 }}>3. OKF v2.0 Correlation</h4>
-                <p style={{ fontSize: "12px", color: "var(--ink-secondary)", marginTop: "6px" }}>
-                  Matches current incident signature with 148+ historical precedents in the Open Knowledge Fabric to determine proven fix confidence.
-                </p>
-              </div>
-
-              <div className="prism-card" style={{ padding: "16px", background: "rgba(255, 255, 255, 0.02)" }}>
-                <h4 style={{ fontSize: "13px", color: "var(--accent-amber)", margin: 0 }}>4. Remediation Governance</h4>
-                <p style={{ fontSize: "12px", color: "var(--ink-secondary)", marginTop: "6px" }}>
-                  Stages cryptographically sealed Action Proposals (GitLab MR, DB Pool scaling) requiring engineer approval under delegated identity.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* =========================================================================
-         TAB 5: INTERACTIVE SCHEMA TESTER
-         ========================================================================= */}
+      {/* TAB 6: LIVE SCHEMA TESTER */}
       {activeTab === "tester" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           <div className="prism-card" style={{ padding: "24px" }}>
@@ -470,14 +424,14 @@ class SplunkLogConnector(BaseConnector):
               Live Tool Schema Validator
             </h3>
             <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "6px" }}>
-              Validate your custom tool or MCP tool schema against the Sentrix ADK 2.8 runtime specifications before registering it in production.
+              Validate your tool schema against Sentrix ADK 2.8 runtime specifications:
             </p>
 
             <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
               <textarea
                 value={testToolSchema}
                 onChange={(e) => setTestToolSchema(e.target.value)}
-                rows={12}
+                rows={10}
                 className="mono"
                 style={{
                   width: "100%",
@@ -486,7 +440,7 @@ class SplunkLogConnector(BaseConnector):
                   border: "1px solid var(--border-subtle)",
                   borderRadius: "8px",
                   color: "var(--ink-primary)",
-                  fontSize: "12.5px"
+                  fontSize: "12px"
                 }}
               />
 
@@ -497,28 +451,6 @@ class SplunkLogConnector(BaseConnector):
                   style={{ gap: "6px", padding: "8px 16px", fontSize: "12px" }}
                 >
                   <Play size={13} /> Validate Tool Schema
-                </button>
-                <button
-                  onClick={() => {
-                    setTestToolSchema(JSON.stringify({
-                      name: "get_k8s_pod_logs",
-                      description: "Fetch tail logs of a specified Kubernetes pod in the project namespace",
-                      parameters: {
-                        type: "object",
-                        properties: {
-                          pod_name: { type: "string" },
-                          tail_lines: { type: "integer", default: 100 }
-                        },
-                        required: ["pod_name"]
-                      },
-                      is_read_only: true
-                    }, null, 2));
-                    setSchemaValidationResult(null);
-                  }}
-                  className="btn-secondary"
-                  style={{ fontSize: "12px", padding: "8px 14px" }}
-                >
-                  Load K8s Sample
                 </button>
               </div>
 

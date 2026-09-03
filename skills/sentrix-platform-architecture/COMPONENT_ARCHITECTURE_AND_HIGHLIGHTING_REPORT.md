@@ -200,14 +200,15 @@ In [AutoTriageHub.jsx](file:///Users/kbk/Desktop/Prism/frontend/src/components/A
   - Supports reporting framework-level issues (chat stream disconnects, broker failures), submitting feature requests (new connectors, custom skills), and reporting performance lags.
   - Automatically captures environment context (Project key, dynamic environment name, engineer identity, browser/OS user-agent, ISO timestamp).
   - Dispatches feedback, generates an immediate tracking code (`STX-FEEDBACK-xxxx`), and stores it in persistent logs.
-- **Platform-Level Extensibility Documentation Modal (`DocsModal.jsx`):**
+- **Platform-Level Multi-Aspect Documentation Hub (`DocsModal.jsx`):**
   - Designed as a platform-wide modal popup rather than a project tab. Accessible anywhere via the TopBar `Docs` button and Help popover.
-  - Contains full code recipes and schemas for:
-    1. **Adding Custom Python Tools:** Tool Broker registration, parameters JSON schema, and read-only vs. action proposal governance.
-    2. **Model Context Protocol (MCP):** Anthropic & Google ADK standard stdio/SSE transports, dynamic Gemini tool synthesis, and `mcp_config.json`.
-    3. **Datasource Connectors:** Subclassing `BaseConnector`, heartbeat probes, and credential security.
-    4. **Autonomous SRE Agents:** Google ADK 2.8 on Gemini 2.5 Pro architecture, iterative reasoning loops, and OKF v2.0 correlation.
-    5. **Interactive Tool Schema Validator:** In-browser JSON schema validation widget for testing custom tool definitions prior to production deployment.
+  - Houses 6 comprehensive documentation categories:
+    1. 🚀 **How to Use the App:** Step-by-step tour through Live Triage Board, Autonomous Investigation Stream, Action Proposal Authorization, and Project Setup Studio.
+    2. ⚙️ **How It Works:** Dual-loop autonomous architecture powered by Google ADK 2.8 on Gemini 2.5 Pro, Zero-Trust Tool Broker, and Open Knowledge Fabric (OKF v2.0).
+    3. 💬 **How to Request & Prompt:** Inquiry guide with copyable prompt recipes for telemetry anomaly charts, database lock inspection, Kubernetes pod health, and executive RCA reports.
+    4. 🔧 **Adding Tools & Connectors:** Python Tool Broker definitions, parameter schemas, read-only vs. action proposal governance, and `BaseConnector` implementations.
+    5. 🌐 **Model Context Protocol (MCP):** Anthropic & Google ADK standard stdio/SSE transports, dynamic Gemini tool synthesis, and `mcp_config.json` specifications.
+    6. 🧪 **Interactive Live Tool Schema Validator:** In-browser JSON schema validation widget for testing custom tool definitions prior to production deployment.
 
 ---
 

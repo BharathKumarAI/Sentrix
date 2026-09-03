@@ -361,15 +361,16 @@ When the autonomous agent processes an inquiry, instead of static loading text, 
 
 ---
 
-## 12. Extensibility & Developer Documentation (`DocsModal.jsx`)
+## 12. Multi-Aspect Platform Documentation Hub (`DocsModal.jsx`)
 
 - **Platform-Level Modal Popup:** Documentation is treated as a global platform resource rather than a project tab. It opens as an interactive glassmorphic modal popup from anywhere on the platform (via the TopBar `Docs` button or Help popover) without displacing active investigation chat or triage sessions.
-- **Interactive Contents:**
-  1. **Adding New Tools:** Python Tool Broker definitions, parameter schemas, and read-only execution vs. mutating Action Proposal requirements.
-  2. **Model Context Protocol (MCP):** Native stdio and SSE server integration, dynamic Gemini tool synthesis, and `mcp_config.json` specifications.
-  3. **Datasource Connectors:** `BaseConnector` subclassing, credential encryption, and heartbeat probe methods.
-  4. **Autonomous Agent Specifications:** Google ADK 2.8 on Gemini 2.5 Pro, OKF v2.0 correlation, and multi-turn SRE reasoning loops.
-  5. **Interactive Live Tool Schema Validator:** In-browser JSON schema validation widget for testing custom tool definitions prior to production deployment.
+- **6 Comprehensive Documentation Aspects:**
+  1. 🚀 **How to Use the App:** Step-by-step tour through Live Triage Board, Autonomous Investigation Stream, Action Proposal Authorization, and Project Setup Studio.
+  2. ⚙️ **How It Works:** Dual-loop autonomous architecture powered by Google ADK 2.8 on Gemini 2.5 Pro, Zero-Trust Tool Broker, and Open Knowledge Fabric (OKF v2.0).
+  3. 💬 **How to Request & Prompt:** Inquiry guide with copyable prompt recipes for telemetry anomaly charts, database lock inspection, Kubernetes pod health, and executive RCA reports.
+  4. 🔧 **Adding Tools & Connectors:** Python Tool Broker definitions, parameter schemas, read-only vs. action proposal governance, and `BaseConnector` implementations.
+  5. 🌐 **Model Context Protocol (MCP):** Native stdio and SSE server integration, dynamic Gemini tool synthesis, and `mcp_config.json` specifications.
+  6. 🧪 **Interactive Live Tool Schema Validator:** In-browser JSON schema validation widget for testing custom tool definitions prior to production deployment.
 
 
 
