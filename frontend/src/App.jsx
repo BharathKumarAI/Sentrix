@@ -15,6 +15,7 @@ import { ParameterStudio } from "./components/ParameterStudio";
 import { ProjectCustomizationView } from "./components/ProjectCustomizationView";
 import { NewProjectModal } from "./components/NewProjectModal";
 import { LandingPage } from "./pages/LandingPage";
+import { LiveTriageBoard } from "./components/LiveTriageBoard";
 import { 
   fetchProjects, 
   fetchPendingActions, 
@@ -188,6 +189,7 @@ export function App() {
           <Route path="tickets" element={<ProjectOverviewPage activeProject={activeProject} />} />
           <Route path="runs" element={<ProjectOverviewPage activeProject={activeProject} />} />
           <Route path="knowledge" element={<OkfKnowledgeBrowser activeProject={activeProject} />} />
+          <Route path="board" element={<LiveTriageBoard activeProject={activeProject} activeEnvironment={activeEnvironment} />} />
           <Route path="environments" element={<EnvironmentMatrixEditor activeProject={activeProject} />} />
           <Route path="parameters" element={<ParameterStudio activeProject={activeProject} isAdmin={true} />} />
           <Route path="settings" element={<ProjectCustomizationView activeProject={activeProject} />} />

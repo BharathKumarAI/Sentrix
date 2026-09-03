@@ -156,3 +156,7 @@ export async function sendChatQuery(data) {
   });
   return res.json();
 }
+export async function fetchBoardTickets(projectKey) {
+  const res = await fetch(`${API_BASE}/board/tickets/${projectKey}`);
+  return res.json();
+}

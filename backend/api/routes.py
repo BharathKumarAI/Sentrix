@@ -1121,3 +1121,13 @@ async def submit_feedback(req: SubmitFeedbackRequest):
 @router.get("/metrics/dashboard")
 async def get_metrics_dashboard(project_id: Optional[str] = None):
     return await MetricsService.get_dashboard_summary(project_id=project_id)
+
+@router.get("/board/tickets/{project_key}")
+async def get_board_tickets(project_key: str):
+    """Return live triage board tickets for the given project (placeholder data)."""
+    # Placeholder ticket data
+    return [
+        {"id": "1", "key": "BILL-1049", "title": "Payment processing error", "status": "incoming", "priority": "P1", "confidence": 96, "assignedTeam": "Payments"},
+        {"id": "2", "key": "AUTH-2091", "title": "Auth service latency spike", "status": "auto", "priority": "P2", "confidence": 88, "assignedTeam": "Auth"},
+        {"id": "3", "key": "DB-3030", "title": "Database connection pool exhaustion", "status": "pending", "priority": "P1", "confidence": 92, "assignedTeam": "DB Team"},
+    ]
