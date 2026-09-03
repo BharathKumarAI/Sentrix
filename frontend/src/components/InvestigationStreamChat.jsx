@@ -460,56 +460,77 @@ WHERE datname = 'billing_ledger' AND state != 'idle';
               key={m.id}
               style={{
                 display: "flex",
-                flexDirection: "column",
-                alignSelf: isBot ? "flex-start" : "flex-end",
-                maxWidth: isBot ? "90%" : "75%",
-                gap: "8px"
+                flexDirection: "row",
+                justifyContent: isBot ? "flex-start" : "flex-end",
+                alignItems: "flex-start",
+                gap: "10px",
+                maxWidth: "100%"
               }}
             >
+              {/* Bot Avatar */}
+              {isBot && (
+                <div style={{
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "8px",
+                  background: "var(--prism-gradient, linear-gradient(135deg, #ec4899, #8b5cf6))",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#fff",
+                  flexShrink: 0,
+                  boxShadow: "0 0 10px rgba(236, 72, 153, 0.3)"
+                }}>
+                  <Bot size={16} />
+                </div>
+              )}
+
               {/* Message Outer Shell */}
               <div
                 style={{
-                  padding: "18px 20px",
-                  borderRadius: "10px",
+                  maxWidth: isBot ? "88%" : "75%",
+                  padding: isBot ? "18px 20px" : "12px 16px",
+                  borderRadius: isBot ? "10px" : "12px 12px 2px 12px",
                   background: isBot ? "var(--bg-card, #0b102b)" : "rgba(236, 72, 153, 0.12)",
                   border: isBot ? "1px solid var(--border-card, rgba(255, 255, 255, 0.08))" : "1px solid rgba(236, 72, 153, 0.35)"
                 }}
               >
-                {/* Meta Header with Triggered Tools Badges */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    marginBottom: "12px",
-                    borderBottom: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.06))",
-                    paddingBottom: "8px"
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                    {isBot ? <Bot size={15} color="var(--prism-pink, #ec4899)" /> : <User size={15} color="var(--accent-teal, #10b981)" />}
-                    <span style={{ fontSize: "12.5px", fontWeight: 700, color: isBot ? "var(--prism-pink, #ec4899)" : "var(--ink-primary, #fff)" }}>
-                      {isBot ? "Autonomous SRE Agent" : delegatedIdentity}
+                {/* Meta Header with Triggered Tools Badges (Bot Only) */}
+                {isBot && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: "12px",
+                      borderBottom: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.06))",
+                      paddingBottom: "8px"
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                      <span style={{ fontSize: "12.5px", fontWeight: 700, color: "var(--prism-pink, #ec4899)" }}>
+                        Autonomous SRE Agent
+                      </span>
+
+                      {/* Triggered Tool Indicators */}
+                      {m.triggeredTools && m.triggeredTools.map((tId) => (
+                        <span key={tId} className="mono badge badge-teal" style={{ fontSize: "9.5px", gap: "4px" }}>
+                          <Zap size={9} /> Triggered: {tId.toUpperCase()}
+                        </span>
+                      ))}
+
+                      {m.generationTime && (
+                        <span className="mono" style={{ fontSize: "10px", color: "var(--ink-tertiary, #64748b)" }}>
+                          ⚡ {m.generationTime}
+                        </span>
+                      )}
+                    </div>
+
+                    <span className="mono" style={{ fontSize: "10.5px", color: "var(--ink-tertiary, #64748b)" }}>
+                      {m.timestamp}
                     </span>
-
-                    {/* Triggered Tool Indicators */}
-                    {isBot && m.triggeredTools && m.triggeredTools.map((tId) => (
-                      <span key={tId} className="mono badge badge-teal" style={{ fontSize: "9.5px", gap: "4px" }}>
-                        <Zap size={9} /> Triggered: {tId.toUpperCase()}
-                      </span>
-                    ))}
-
-                    {m.generationTime && (
-                      <span className="mono" style={{ fontSize: "10px", color: "var(--ink-tertiary, #64748b)" }}>
-                        ⚡ {m.generationTime}
-                      </span>
-                    )}
                   </div>
-
-                  <span className="mono" style={{ fontSize: "10.5px", color: "var(--ink-tertiary, #64748b)" }}>
-                    {m.timestamp}
-                  </span>
-                </div>
+                )}
 
                 {/* Collapsible Chain of Thought Accordion */}
                 {isBot && m.thinking && m.thinking.length > 0 && (
@@ -566,6 +587,19 @@ WHERE datname = 'billing_ledger' AND state != 'idle';
                     {m.text}
                   </ReactMarkdown>
                 </div>
+
+                {/* User Message Timestamp Subtly Below Text */}
+                {!isBot && (
+                  <div style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    marginTop: "5px"
+                  }}>
+                    <span className="mono" style={{ fontSize: "10px", color: "var(--ink-tertiary, #64748b)" }}>
+                      {m.timestamp}
+                    </span>
+                  </div>
+                )}
 
                 {/* DYNAMIC ARTIFACT: RCA REPORT & TIMELINE */}
                 {isBot && m.artifact && m.artifact.type === "RCA_REPORT" && (
@@ -759,6 +793,37 @@ WHERE datname = 'billing_ledger' AND state != 'idle';
                   </div>
                 )}
               </div>
+
+              {/* User Avatar with Initials */}
+              {!isBot && (() => {
+                const clean = (delegatedIdentity || "Sarah Jones").replace(/@.*$/, "").replace(/[^a-zA-Z]/g, " ").trim();
+                const parts = clean.split(/\s+/).filter(Boolean);
+                const initials = parts.length >= 2 
+                  ? (parts[0][0] + parts[1][0]).toUpperCase() 
+                  : (clean.slice(0, 2).toUpperCase() || "KB");
+                return (
+                  <div
+                    style={{
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "8px",
+                      background: "var(--prism-gradient, linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%))",
+                      color: "#fff",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontWeight: 700,
+                      fontSize: "11.5px",
+                      letterSpacing: "0.5px",
+                      flexShrink: 0,
+                      boxShadow: "0 0 10px rgba(236, 72, 153, 0.3)"
+                    }}
+                    title={delegatedIdentity}
+                  >
+                    {initials}
+                  </div>
+                );
+              })()}
             </div>
           );
         })}

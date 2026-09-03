@@ -315,48 +315,69 @@ Based on live telemetry for \`${ticketKey}\`, all diagnostic indicators verify t
               key={m.id}
               style={{
                 display: "flex",
-                flexDirection: "column",
-                alignSelf: isBot ? "flex-start" : "flex-end",
-                maxWidth: isBot ? "88%" : "75%",
-                gap: "8px"
+                flexDirection: "row",
+                justifyContent: isBot ? "flex-start" : "flex-end",
+                alignItems: "flex-start",
+                gap: "10px",
+                maxWidth: "100%"
               }}
             >
+              {/* Bot Avatar */}
+              {isBot && (
+                <div style={{
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "8px",
+                  background: "var(--prism-gradient, linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%))",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#fff",
+                  flexShrink: 0,
+                  boxShadow: "0 0 10px rgba(236, 72, 153, 0.3)"
+                }}>
+                  <Bot size={15} />
+                </div>
+              )}
+
               {/* Message Shell */}
               <div
                 style={{
-                  padding: "16px 18px",
-                  borderRadius: "10px",
+                  maxWidth: isBot ? "88%" : "75%",
+                  padding: isBot ? "16px 18px" : "12px 16px",
+                  borderRadius: isBot ? "10px" : "12px 12px 2px 12px",
                   background: isBot ? "var(--bg-card, #0b102b)" : "rgba(236, 72, 153, 0.12)",
                   border: isBot ? "1px solid var(--border-card, rgba(255, 255, 255, 0.08))" : "1px solid rgba(236, 72, 153, 0.35)"
                 }}
               >
-                {/* Meta Header */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    marginBottom: "10px",
-                    borderBottom: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.06))",
-                    paddingBottom: "6px"
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    {isBot ? <Bot size={14} color="var(--prism-pink, #ec4899)" /> : <User size={14} color="var(--accent-teal, #10b981)" />}
-                    <span style={{ fontSize: "12px", fontWeight: 700, color: isBot ? "var(--prism-pink, #ec4899)" : "var(--ink-primary, #fff)" }}>
-                      {isBot ? "Autonomous Agent" : "You (Domain Engineer)"}
-                    </span>
-                    {m.generationTime && (
-                      <span className="mono" style={{ fontSize: "10px", color: "var(--ink-tertiary, #64748b)" }}>
-                        ⚡ {m.generationTime}
+                {/* Meta Header (Bot Only) */}
+                {isBot && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: "10px",
+                      borderBottom: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.06))",
+                      paddingBottom: "6px"
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--prism-pink, #ec4899)" }}>
+                        Autonomous Agent
                       </span>
-                    )}
-                  </div>
+                      {m.generationTime && (
+                        <span className="mono" style={{ fontSize: "10px", color: "var(--ink-tertiary, #64748b)" }}>
+                          ⚡ {m.generationTime}
+                        </span>
+                      )}
+                    </div>
 
-                  <span className="mono" style={{ fontSize: "10.5px", color: "var(--ink-tertiary, #64748b)" }}>
-                    {m.timestamp}
-                  </span>
-                </div>
+                    <span className="mono" style={{ fontSize: "10.5px", color: "var(--ink-tertiary, #64748b)" }}>
+                      {m.timestamp}
+                    </span>
+                  </div>
+                )}
 
                 {/* Collapsible Chain of Thought Accordion */}
                 {isBot && m.thinking && m.thinking.length > 0 && (
@@ -413,6 +434,19 @@ Based on live telemetry for \`${ticketKey}\`, all diagnostic indicators verify t
                     {m.text}
                   </ReactMarkdown>
                 </div>
+
+                {/* User Message Timestamp Subtly Below Text */}
+                {!isBot && (
+                  <div style={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    marginTop: "5px"
+                  }}>
+                    <span className="mono" style={{ fontSize: "10px", color: "var(--ink-tertiary, #64748b)" }}>
+                      {m.timestamp}
+                    </span>
+                  </div>
+                )}
 
                 {/* Tool Artifacts (Data Tables / Diagnostics) */}
                 {isBot && m.toolArtifacts && m.toolArtifacts.length > 0 && (
@@ -567,6 +601,30 @@ Based on live telemetry for \`${ticketKey}\`, all diagnostic indicators verify t
                   </div>
                 )}
               </div>
+
+              {/* User Avatar with Initials */}
+              {!isBot && (
+                <div
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    background: "var(--prism-gradient, linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%))",
+                    color: "#fff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: 700,
+                    fontSize: "11.5px",
+                    letterSpacing: "0.5px",
+                    flexShrink: 0,
+                    boxShadow: "0 0 10px rgba(236, 72, 153, 0.3)"
+                  }}
+                  title="Domain Engineer"
+                >
+                  KB
+                </div>
+              )}
             </div>
           );
         })}

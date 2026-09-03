@@ -513,50 +513,53 @@ export function InvestigationStream({
 
                 {/* Message Bubble Card */}
                 <div className="glass-card" style={{
-                  flex: 1,
-                  padding: "20px 24px",
+                  flex: isAssistant ? 1 : "0 1 auto",
+                  maxWidth: isAssistant ? "100%" : "82%",
+                  marginLeft: isAssistant ? 0 : "auto",
+                  padding: isAssistant ? "20px 24px" : "14px 18px",
                   background: isAssistant ? "var(--card-bg-chat)" : "rgba(225, 29, 72, 0.12)",
                   border: isAssistant ? "1px solid var(--border-card)" : "1px solid rgba(225, 29, 72, 0.35)",
+                  borderRadius: isAssistant ? "12px" : "14px 14px 4px 14px"
                 }}>
-                  {/* Message Header Bar */}
-                  <div style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    marginBottom: "14px",
-                    borderBottom: "1px solid var(--border-subtle)",
-                    paddingBottom: "10px"
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <span style={{ fontSize: "12.5px", fontWeight: "700", color: isAssistant ? "var(--prism-pink)" : "var(--ink-primary)" }}>
-                        {isAssistant ? "Sentrix Agent Runtime" : delegatedIdentity}
-                      </span>
-                      {isAssistant && (
+                  {/* Assistant Message Header Bar Only */}
+                  {isAssistant && (
+                    <div style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: "14px",
+                      borderBottom: "1px solid var(--border-subtle)",
+                      paddingBottom: "10px"
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <span style={{ fontSize: "12.5px", fontWeight: "700", color: "var(--prism-pink)" }}>
+                          Sentrix Agent Runtime
+                        </span>
                         <span className="badge badge-teal" style={{ fontSize: "9.5px" }}>
                           Verified Telemetry
                         </span>
-                      )}
-                      {isAssistant && m.generationTime && (
-                        <span className="mono badge badge-violet" style={{ fontSize: "9.5px" }}>
-                          <Zap size={10} /> {m.generationTime}
-                        </span>
-                      )}
-                    </div>
+                        {m.generationTime && (
+                          <span className="mono badge badge-violet" style={{ fontSize: "9.5px" }}>
+                            <Zap size={10} /> {m.generationTime}
+                          </span>
+                        )}
+                      </div>
 
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span className="mono" style={{ fontSize: "11px", color: "var(--ink-tertiary)" }}>
-                        {m.timestamp}
-                      </span>
-                      <button
-                        className="btn-ghost"
-                        style={{ padding: "4px" }}
-                        onClick={() => handleCopyText(m.text, m.id)}
-                        title="Copy message content"
-                      >
-                        {copiedId === m.id ? <Check size={13} color="var(--accent-teal)" /> : <Copy size={13} />}
-                      </button>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span className="mono" style={{ fontSize: "11px", color: "var(--ink-tertiary)" }}>
+                          {m.timestamp}
+                        </span>
+                        <button
+                          className="btn-ghost"
+                          style={{ padding: "4px" }}
+                          onClick={() => handleCopyText(m.text, m.id)}
+                          title="Copy message content"
+                        >
+                          {copiedId === m.id ? <Check size={13} color="var(--accent-teal)" /> : <Copy size={13} />}
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* SHOW THINKING ACCORDION */}
                   {isAssistant && m.thinking && m.thinking.length > 0 && (
@@ -613,6 +616,29 @@ export function InvestigationStream({
                       {m.text}
                     </ReactMarkdown>
                   </div>
+
+                  {/* User Message Subtle Time & Copy Footer Below Text */}
+                  {!isAssistant && (
+                    <div style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "flex-end",
+                      gap: "6px",
+                      marginTop: "6px"
+                    }}>
+                      <span className="mono" style={{ fontSize: "10.5px", color: "var(--ink-tertiary)" }}>
+                        {m.timestamp}
+                      </span>
+                      <button
+                        className="btn-ghost"
+                        style={{ padding: "2px 4px", color: "var(--ink-tertiary)" }}
+                        onClick={() => handleCopyText(m.text, m.id)}
+                        title="Copy message content"
+                      >
+                        {copiedId === m.id ? <Check size={11} color="var(--accent-teal)" /> : <Copy size={11} />}
+                      </button>
+                    </div>
+                  )}
 
                   {/* ACTION APPROVALS: JIRA COMMENTING & RUN COMMANDS */}
                   {isAssistant && hasApprovals && (
@@ -913,22 +939,36 @@ export function InvestigationStream({
                   )}
                 </div>
 
-                {/* User Avatar */}
-                {!isAssistant && (
-                  <div style={{
-                    width: "34px",
-                    height: "34px",
-                    borderRadius: "10px",
-                    background: "var(--bg-card)",
-                    border: "1px solid var(--border-card)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0
-                  }}>
-                    <User size={16} color="var(--ink-primary)" />
-                  </div>
-                )}
+                {/* User Avatar with Initials */}
+                {!isAssistant && (() => {
+                  const clean = (delegatedIdentity || "Sarah Jones").replace(/@.*$/, "").replace(/[^a-zA-Z]/g, " ").trim();
+                  const parts = clean.split(/\s+/).filter(Boolean);
+                  const initials = parts.length >= 2 
+                    ? (parts[0][0] + parts[1][0]).toUpperCase() 
+                    : (clean.slice(0, 2).toUpperCase() || "KB");
+                  return (
+                    <div
+                      style={{
+                        width: "34px",
+                        height: "34px",
+                        borderRadius: "10px",
+                        background: "var(--prism-gradient)",
+                        color: "#fff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontWeight: "700",
+                        fontSize: "12px",
+                        letterSpacing: "0.5px",
+                        flexShrink: 0,
+                        boxShadow: "0 0 12px var(--prism-glow)"
+                      }}
+                      title={delegatedIdentity || "User"}
+                    >
+                      {initials}
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}
