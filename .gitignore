@@ -48,6 +48,11 @@ id_ed25519*
 *.sqlite3
 *.log
 
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
 # System / OS & Editor files
 .DS_Store
 Thumbs.db

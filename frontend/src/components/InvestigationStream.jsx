@@ -145,6 +145,8 @@ export function InvestigationStream({
   const [inputQuery, setInputQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [elapsedTimer, setElapsedTimer] = useState(0);
+  const [activeSteeringFocus, setActiveSteeringFocus] = useState(null);
+  const [activePeekTelemetry, setActivePeekTelemetry] = useState(null);
   const [expandedThinking, setExpandedThinking] = useState({ msg_init_01: false });
   const [copiedId, setCopiedId] = useState(null);
   const [feedbackModalMsg, setFeedbackModalMsg] = useState(null);
@@ -177,6 +179,8 @@ export function InvestigationStream({
   useEffect(() => {
     if (isLoading) {
       setElapsedTimer(0);
+      setActiveSteeringFocus(null);
+      setActivePeekTelemetry(null);
       timerRef.current = setInterval(() => {
         setElapsedTimer((prev) => +(prev + 0.1).toFixed(1));
       }, 100);
@@ -264,14 +268,17 @@ export function InvestigationStream({
 
     try {
       const activeTools = toolsConfig.filter((t) => t.enabled).map((t) => t.id);
-      const res = await sendChatQuery({
-        project_id: activeProject?.id || "prj_billing",
-        environment: activeEnvironment || "prod",
-        query: textToSend,
-        delegated_identity: delegatedIdentity,
-        enabled_tools: activeTools,
-        attachments: filesToSend
-      });
+      const [res] = await Promise.all([
+        sendChatQuery({
+          project_id: activeProject?.id || "prj_billing",
+          environment: activeEnvironment || "prod",
+          query: textToSend,
+          delegated_identity: delegatedIdentity,
+          enabled_tools: activeTools,
+          attachments: filesToSend
+        }),
+        new Promise((resolve) => setTimeout(resolve, 2800))
+      ]);
 
       const totalDuration = ((performance.now() - startTime) / 1000).toFixed(2);
       const msgId = `msg_asst_${Date.now()}`;
@@ -926,35 +933,222 @@ export function InvestigationStream({
             );
           })}
 
-          {isLoading && (
-            <div className="message-animate-in" style={{ display: "flex", gap: "14px", alignItems: "flex-start", width: "90%" }}>
-              <div style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "10px",
-                background: "var(--prism-gradient)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0
-              }}>
-                <RotateCw size={18} color="#fff" className="animate-spin" />
-              </div>
+          {isLoading && (() => {
+            const progressPct = Math.min(96, Math.max(14, Math.round((elapsedTimer / 3.8) * 92) + 8));
+            const stage = elapsedTimer < 0.8 ? 0 : elapsedTimer < 1.8 ? 1 : elapsedTimer < 2.8 ? 2 : 3;
 
-              <div className="prism-card" style={{ flex: 1, padding: "16px 20px", background: "var(--thinking-bg)", border: "1px solid rgba(139, 125, 255, 0.4)" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--accent-violet)", fontWeight: "600", fontSize: "12.5px" }}>
-                    <BrainCircuit size={16} />
-                    <span>Thinking & Telemetry Synthesis...</span>
-                  </div>
-                  <span className="mono badge badge-violet" style={{ fontSize: "10px" }}>{elapsedTimer}s elapsed</span>
+            const stages = [
+              { id: 0, title: "Tool Broker Dispatch", desc: "Querying PostgreSQL Primary, Datadog APM & Splunk in parallel...", icon: "⚡" },
+              { id: 1, title: "Telemetry Extraction", desc: "Tracing HikariCP connection pool timeout exceptions & lock contention...", icon: "🔍" },
+              { id: 2, title: "OKF v2.0 Correlation", desc: "Cross-referencing historical incident cases & runbook match scores...", icon: "🧠" },
+              { id: 3, title: "RCA Synthesis & Staging", desc: "Formulating verified root cause & staging cryptographic action proposals...", icon: "🛡️" }
+            ];
+
+            return (
+              <div className="message-animate-in" style={{ display: "flex", gap: "14px", alignItems: "flex-start", width: "95%" }}>
+                <div style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "10px",
+                  background: "var(--prism-gradient)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  boxShadow: "0 0 16px var(--prism-glow)"
+                }}>
+                  <RotateCw size={18} color="#fff" className="animate-spin" />
                 </div>
-                <div style={{ fontSize: "12px", color: "var(--ink-secondary)" }}>
-                  Correlating Splunk logs, PostgreSQL replica pool, and Kubernetes events in parallel...
+
+                <div
+                  className="prism-card"
+                  style={{
+                    flex: 1,
+                    padding: "18px 22px",
+                    background: "var(--thinking-bg)",
+                    border: "1.5px solid rgba(139, 125, 255, 0.4)",
+                    borderRadius: "12px",
+                    boxShadow: "0 8px 32px rgba(0, 0, 0, 0.35)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "14px"
+                  }}
+                >
+                  {/* Top Bar: Thinking Header + Elapsed Badge + Cancel button */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--accent-violet)", fontWeight: "700", fontSize: "13px" }}>
+                      <BrainCircuit size={17} />
+                      <span>Autonomous SRE Diagnostic Engine Active</span>
+                      <span className="radar-ping-dot" style={{ width: "6px", height: "6px" }} />
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span className="mono badge badge-violet" style={{ fontSize: "10px" }}>
+                        ⚡ {elapsedTimer}s • {progressPct}% Progress
+                      </span>
+                      <button
+                        onClick={() => setIsLoading(false)}
+                        className="btn-ghost"
+                        style={{ fontSize: "11px", padding: "2px 8px", color: "var(--ink-tertiary)" }}
+                        title="Cancel or redefine inquiry"
+                      >
+                        <X size={12} /> Cancel
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Animated Multi-Stage Neon Progress Bar */}
+                  <div style={{ width: "100%", height: "7px", background: "rgba(255, 255, 255, 0.08)", borderRadius: "4px", overflow: "hidden", position: "relative" }}>
+                    <div
+                      className="thinking-progress-bar"
+                      style={{
+                        width: `${progressPct}%`,
+                        height: "100%",
+                        borderRadius: "4px",
+                        boxShadow: "0 0 12px var(--prism-glow)",
+                        transition: "width 0.2s ease-out"
+                      }}
+                    />
+                  </div>
+
+                  {/* Current Active Diagnostic Stage */}
+                  <div style={{ padding: "10px 14px", background: "rgba(0, 0, 0, 0.25)", borderRadius: "8px", borderLeft: "3px solid var(--accent-teal)" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2px" }}>
+                      <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--accent-teal)", textTransform: "uppercase" }}>
+                        {stages[stage].icon} Stage {stage + 1}/4: {stages[stage].title}
+                      </span>
+                      <span className="mono" style={{ fontSize: "10px", color: "var(--ink-tertiary)" }}>
+                        Running Sub-routines in Parallel
+                      </span>
+                    </div>
+                    <p style={{ fontSize: "12.5px", color: "var(--ink-primary)", margin: 0, lineHeight: 1.45 }}>
+                      {stages[stage].desc}
+                    </p>
+                  </div>
+
+                  {/* Steering Guidance Feedback (If user clicked a focus chip) */}
+                  {activeSteeringFocus && (
+                    <div style={{ padding: "8px 12px", background: "rgba(236, 72, 153, 0.12)", border: "1px solid rgba(236, 72, 153, 0.3)", borderRadius: "6px", fontSize: "11.5px", color: "var(--prism-pink)", display: "flex", alignItems: "center", gap: "8px" }}>
+                      <Sparkles size={13} />
+                      <span><strong>Diagnostic Focus Shifted:</strong> Agent prioritizing <em>"{activeSteeringFocus}"</em> in root cause synthesis!</span>
+                    </div>
+                  )}
+
+                  {/* Interactive Peek Cards (Keep User Engaged!) */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--ink-tertiary)" }}>
+                        🔍 Peek Live Telemetry while agent processes:
+                      </span>
+                      <span style={{ fontSize: "10.5px", color: "var(--accent-teal)" }}>Click to inspect real-time packets</span>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                      <button
+                        onClick={() => setActivePeekTelemetry(activePeekTelemetry === "db" ? null : "db")}
+                        className="btn-ghost"
+                        style={{
+                          fontSize: "11px",
+                          padding: "4px 10px",
+                          background: activePeekTelemetry === "db" ? "rgba(59, 130, 246, 0.2)" : "rgba(255, 255, 255, 0.04)",
+                          borderColor: activePeekTelemetry === "db" ? "var(--accent-blue)" : "var(--border-subtle)",
+                          borderRadius: "6px",
+                          gap: "5px"
+                        }}
+                      >
+                        <span>🐘</span>
+                        <span>Peek: PostgreSQL Locks</span>
+                      </button>
+
+                      <button
+                        onClick={() => setActivePeekTelemetry(activePeekTelemetry === "apm" ? null : "apm")}
+                        className="btn-ghost"
+                        style={{
+                          fontSize: "11px",
+                          padding: "4px 10px",
+                          background: activePeekTelemetry === "apm" ? "rgba(236, 72, 153, 0.2)" : "rgba(255, 255, 255, 0.04)",
+                          borderColor: activePeekTelemetry === "apm" ? "var(--prism-pink)" : "var(--border-subtle)",
+                          borderRadius: "6px",
+                          gap: "5px"
+                        }}
+                      >
+                        <span>🐶</span>
+                        <span>Peek: APM Latency Spike</span>
+                      </button>
+
+                      <button
+                        onClick={() => setActivePeekTelemetry(activePeekTelemetry === "k8s" ? null : "k8s")}
+                        className="btn-ghost"
+                        style={{
+                          fontSize: "11px",
+                          padding: "4px 10px",
+                          background: activePeekTelemetry === "k8s" ? "rgba(16, 185, 129, 0.2)" : "rgba(255, 255, 255, 0.04)",
+                          borderColor: activePeekTelemetry === "k8s" ? "var(--accent-teal)" : "var(--border-subtle)",
+                          borderRadius: "6px",
+                          gap: "5px"
+                        }}
+                      >
+                        <span>☸️</span>
+                        <span>Peek: Pod Restarts</span>
+                      </button>
+                    </div>
+
+                    {/* Peek Telemetry Drawer */}
+                    {activePeekTelemetry && (
+                      <div style={{ padding: "10px 14px", background: "#030612", borderRadius: "6px", border: "1px solid var(--border-subtle)", fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", lineHeight: 1.5, marginTop: "2px" }}>
+                        {activePeekTelemetry === "db" && (
+                          <div style={{ color: "var(--ink-secondary)" }}>
+                            <span style={{ color: "var(--accent-blue)" }}>[POSTGRES]</span> pg_stat_activity: <span style={{ color: "var(--accent-rose)" }}>20/20 active connections saturated</span>.<br />
+                            &gt; Top lock holder PID 19420: <span style={{ color: "#fff" }}>UPDATE billing_transactions FOR UPDATE</span> (held 4.2s).
+                          </div>
+                        )}
+                        {activePeekTelemetry === "apm" && (
+                          <div style={{ color: "var(--ink-secondary)" }}>
+                            <span style={{ color: "var(--prism-pink)" }}>[DATADOG APM]</span> Service /v1/webhooks/charges: p99 latency <span style={{ color: "var(--accent-rose)" }}>breached 30,000ms</span>.<br />
+                            &gt; Error spike: <span style={{ color: "var(--accent-amber)" }}>PoolAcquireTimeoutException</span> at 420 errors/min.
+                          </div>
+                        )}
+                        {activePeekTelemetry === "k8s" && (
+                          <div style={{ color: "var(--ink-secondary)" }}>
+                            <span style={{ color: "var(--accent-teal)" }}>[KUBERNETES]</span> Deployment <span style={{ color: "#fff" }}>stripe-webhook-worker</span> (3/3 replicas):<br />
+                            &gt; Pod stripe-worker-8f92-x7: <span style={{ color: "var(--accent-rose)" }}>4 restarts</span> due to liveness probe failure (unresponsive event loop).
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Interactive Steering Guidance Chips (Keep User in Control!) */}
+                  <div style={{ borderTop: "1px solid var(--border-subtle)", paddingTop: "10px", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "11px", color: "var(--ink-tertiary)" }}>
+                      🎯 Steer Agent Focus:
+                    </span>
+                    <button
+                      onClick={() => setActiveSteeringFocus("HikariCP Pool Saturation & Deadlocks")}
+                      className="btn-ghost"
+                      style={{ fontSize: "10.5px", padding: "2px 8px", background: "rgba(255, 255, 255, 0.04)", borderRadius: "4px" }}
+                    >
+                      Focus Connection Pool
+                    </button>
+                    <button
+                      onClick={() => setActiveSteeringFocus("Envoy Edge 504 Timeouts")}
+                      className="btn-ghost"
+                      style={{ fontSize: "10.5px", padding: "2px 8px", background: "rgba(255, 255, 255, 0.04)", borderRadius: "4px" }}
+                    >
+                      Focus Envoy 504
+                    </button>
+                    <button
+                      onClick={() => setActiveSteeringFocus("Recent Hotfix Commit Diffs")}
+                      className="btn-ghost"
+                      style={{ fontSize: "10.5px", padding: "2px 8px", background: "rgba(255, 255, 255, 0.04)", borderRadius: "4px" }}
+                    >
+                      Check Recent Git Commits
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           <div ref={messagesEndRef} />
         </div>

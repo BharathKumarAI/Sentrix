@@ -50,21 +50,65 @@ export function ProjectCustomizationView({ activeProject }) {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", padding: "20px" }}>
+    <div style={{
+      padding: "24px 32px",
+      display: "flex",
+      flexDirection: "column",
+      gap: "20px",
+      overflowY: "auto",
+      minHeight: "100%",
+      boxSizing: "border-box"
+    }}>
       
-      {/* Header */}
-      <div className="glass-panel" style={{ padding: "20px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Layers size={18} color="var(--accent-teal)" />
-            <h2 style={{ fontSize: "18px" }}>Project Customization & Setup Instructions</h2>
+      {/* Framework Page Hero Card */}
+      <div
+        className="prism-card"
+        style={{
+          padding: "20px 24px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "16px",
+          background: "var(--bg-elevated)",
+          border: "1px solid var(--border-subtle)"
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <div
+            style={{
+              width: "48px",
+              height: "48px",
+              borderRadius: "12px",
+              background: "var(--prism-gradient)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#fff",
+              boxShadow: "0 0 18px var(--prism-glow)"
+            }}
+          >
+            <Layers size={24} />
           </div>
-          <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "4px" }}>
-            Configure custom prompt directives, domain knowledge, and tool output presentation rules for <strong>{activeProject?.name}</strong>.
-          </p>
+
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink-tertiary)", textTransform: "uppercase" }}>
+                {activeProject?.project_key || "BILLING"} • SETTINGS & INSTRUCTIONS
+              </span>
+              <span className="badge badge-teal">Project Directives</span>
+              <span className="badge badge-magenta">ADK Ingest</span>
+            </div>
+            <h1 style={{ fontSize: "20px", fontWeight: 700, color: "var(--ink-primary)", marginTop: "4px" }}>
+              Project Customization & Setup Instructions
+            </h1>
+            <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "2px" }}>
+              Configure custom prompt directives, domain knowledge, and tool output presentation rules for <strong>{activeProject?.name}</strong>.
+            </p>
+          </div>
         </div>
 
-        <button className="btn-teal" onClick={handleSave} disabled={isSaving}>
+        <button className="btn-primary" onClick={handleSave} disabled={isSaving} style={{ gap: "6px" }}>
           <Save size={14} /> {isSaving ? "Saving..." : savedSuccess ? "Saved!" : "Save Configuration"}
         </button>
       </div>

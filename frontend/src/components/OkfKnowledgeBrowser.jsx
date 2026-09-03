@@ -25,19 +25,62 @@ export function OkfKnowledgeBrowser({ activeProject }) {
   }, [searchQuery, activeProject]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", padding: "20px" }}>
+    <div style={{
+      padding: "24px 32px",
+      display: "flex",
+      flexDirection: "column",
+      gap: "20px",
+      overflowY: "auto",
+      minHeight: "100%",
+      boxSizing: "border-box"
+    }}>
       
-      {/* Header */}
-      <div className="glass-panel" style={{ padding: "20px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <BookOpen size={18} color="var(--accent-teal)" />
-            <h2 style={{ fontSize: "18px" }}>OKF v2.0 (Organizational Knowledge Fabric)</h2>
-            <span className="badge badge-teal">Continuous Learning</span>
+      {/* Framework Page Hero Card */}
+      <div
+        className="prism-card"
+        style={{
+          padding: "20px 24px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "16px",
+          background: "var(--bg-elevated)",
+          border: "1px solid var(--border-subtle)"
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <div
+            style={{
+              width: "48px",
+              height: "48px",
+              borderRadius: "12px",
+              background: "var(--prism-gradient)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#fff",
+              boxShadow: "0 0 18px var(--prism-glow)"
+            }}
+          >
+            <BookOpen size={24} />
           </div>
-          <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "4px" }}>
-            Case-based reasoning store holding verified incident signatures, auto-learned root causes, and executable runbooks.
-          </p>
+
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink-tertiary)", textTransform: "uppercase" }}>
+                {activeProject?.project_key || "BILLING"} • OKF v2.0 KNOWLEDGE FABRIC
+              </span>
+              <span className="badge badge-teal">Continuous Learning</span>
+              <span className="badge badge-magenta">Case-Based Precedents</span>
+            </div>
+            <h1 style={{ fontSize: "20px", fontWeight: 700, color: "var(--ink-primary)", marginTop: "4px" }}>
+              Organizational Knowledge Fabric (OKF v2.0)
+            </h1>
+            <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "2px" }}>
+              Case-based reasoning store holding verified incident signatures, auto-learned root causes, and executable runbooks.
+            </p>
+          </div>
         </div>
 
         {/* Search */}
@@ -51,10 +94,10 @@ export function OkfKnowledgeBrowser({ activeProject }) {
             style={{
               width: "100%",
               padding: "8px 12px 8px 32px",
-              background: "rgba(255, 255, 255, 0.04)",
-              border: "1px solid var(--border-glass)",
-              borderRadius: "var(--radius-pill)",
-              color: "#fff",
+              background: "var(--bg-input)",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "6px",
+              color: "var(--ink-primary)",
               fontSize: "12px"
             }}
           />

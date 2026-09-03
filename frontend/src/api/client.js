@@ -88,6 +88,13 @@ export async function updateProjectEnvMapping(data) {
   return res.json();
 }
 
+export async function deleteProjectEnvMapping(mappingId) {
+  const res = await fetch(`${API_BASE}/connectors/mappings/${mappingId}`, {
+    method: "DELETE",
+  });
+  return res.json();
+}
+
 export async function fetchConnectorHealth() {
   const res = await fetch(`${API_BASE}/connectors/health`);
   return res.json();
@@ -201,3 +208,32 @@ export async function addTicketComment(ticketKey, data) {
   });
   return res.json();
 }
+
+export async function fetchProjectConfiguration(projectKey) {
+  const res = await fetch(`${API_BASE}/projects/${projectKey}/configuration`);
+  return res.json();
+}
+
+export async function updateProjectConfiguration(projectKey, data) {
+  const res = await fetch(`${API_BASE}/projects/${projectKey}/configuration`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
+
+export async function fetchProjectRunbooks(projectKey) {
+  const res = await fetch(`${API_BASE}/projects/${projectKey}/runbooks`);
+  return res.json();
+}
+
+export async function uploadProjectRunbook(projectKey, data) {
+  const res = await fetch(`${API_BASE}/projects/${projectKey}/runbooks`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
+

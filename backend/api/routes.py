@@ -1751,3 +1751,151 @@ async def sync_ticket_to_jira(ticket_key: str, req: SyncJiraRequest):
         "synced_at": datetime.now(timezone.utc).isoformat()
     }
 
+
+# ========================================================================
+# 9. Project Configuration, Setup Studio & Runbook Knowledge
+# ========================================================================
+
+PROJECT_CONFIGURATIONS: Dict[str, Dict[str, Any]] = {
+    "BILLING": {
+        "project_key": "BILLING",
+        "name": "Global Billing & Payment Gateway",
+        "department": "Core FinTech Engineering",
+        "tier": "Tier-1 Mission Critical",
+        "jira_queue": "BILLING-SRE-QUEUE",
+        "jira_queues": ["BILLING-SRE-QUEUE", "PAYMENTS-GATEWAY-QUEUE", "CHECKOUT-ESCALATIONS"],
+        "fix_team": "Payments Core Team",
+        "team_members": ["Sarah K. (sarah.k@company.com)", "Marcus T. (marcus.t@company.com)", "David L. (david.l@company.com)"],
+        "polling_schedule": "30s",
+        "polling_jql": 'project = "BILLING" AND (queue in ("BILLING-SRE-QUEUE", "PAYMENTS-GATEWAY-QUEUE", "CHECKOUT-ESCALATIONS") OR fixTeam = "Payments Core Team" OR assignee in ("sarah.k@company.com", "marcus.t@company.com")) AND status in ("Open", "In Progress", "Escalated") ORDER BY priority DESC, created DESC',
+        "auto_sync_jira": True,
+        "system_prompt": "You are the autonomous SRE agent for the FinTech Billing Gateway. Deconstruct recurring payment timeouts, query PostgreSQL pg_stat_activity, correlate HikariCP pool saturation, and stage verified write remediation proposals.",
+        "temperature": 0.15,
+        "model": "Gemini 2.5 Pro (ADK 2.8)",
+        "skills": {
+            "postgres_pool_analyzer": True,
+            "deadlock_cycle_grapher": True,
+            "k8s_oom_profiler": True,
+            "jwks_cache_stampede": False,
+            "sendgrid_failover": False
+        },
+        "datasources": [
+            {"id": "pg-billing", "name": "PostgreSQL Primary", "type": "DATABASE", "env": "prod", "host": "billing-db-primary.internal:5432", "status": "CONNECTED"},
+            {"id": "dd-logs", "name": "Datadog Logs & APM", "type": "OBSERVABILITY", "env": "prod", "host": "api.datadoghq.com/v2/logs", "status": "CONNECTED"},
+            {"id": "k8s-cluster", "name": "Kubernetes Cluster Operator", "type": "COMPUTE", "env": "prod", "host": "k8s-prod-us-east-1:6443", "status": "CONNECTED"},
+            {"id": "redis-grid", "name": "Redis Session Grid", "type": "CACHE", "env": "prod", "host": "redis-cluster-shard-01:6379", "status": "CONNECTED"}
+        ]
+    }
+}
+
+
+class ProjectConfigurationRequest(BaseModel):
+    name: Optional[str] = None
+    department: Optional[str] = None
+    tier: Optional[str] = None
+    jira_queue: Optional[str] = None
+    jira_queues: Optional[List[str]] = None
+    fix_team: Optional[str] = None
+    team_members: Optional[List[str]] = None
+    polling_schedule: Optional[str] = None
+    polling_jql: Optional[str] = None
+    auto_sync_jira: Optional[bool] = None
+    system_prompt: Optional[str] = None
+    temperature: Optional[float] = None
+    model: Optional[str] = None
+    skills: Optional[Dict[str, bool]] = None
+    datasources: Optional[List[Dict[str, Any]]] = None
+
+
+@router.get("/projects/{project_key}/configuration")
+async def get_project_configuration(project_key: str):
+    """Retrieve complete setup, Jira JQL, connectors, and prompt directives for a project."""
+    pkey = project_key.upper()
+    if pkey in PROJECT_CONFIGURATIONS:
+        return PROJECT_CONFIGURATIONS[pkey]
+    
+    # Generate default configuration for any project
+    default_conf = {
+        "project_key": pkey,
+        "name": f"{pkey} Service Engine",
+        "department": "Platform Engineering",
+        "tier": "Tier-1 Mission Critical",
+        "jira_queue": f"{pkey}-TRIAGE-QUEUE",
+        "jira_queues": [f"{pkey}-TRIAGE-QUEUE", f"{pkey}-ESCALATIONS-QUEUE"],
+        "fix_team": f"{pkey} Core Team",
+        "team_members": ["On-Call SRE (sre-lead@company.com)"],
+        "polling_schedule": "1m",
+        "polling_jql": f'project = "{pkey}" AND (queue in ("{pkey}-TRIAGE-QUEUE", "{pkey}-ESCALATIONS-QUEUE") OR status in ("Open", "In Progress", "Escalated")) ORDER BY priority DESC',
+        "auto_sync_jira": True,
+        "system_prompt": f"You are the autonomous SRE agent for {pkey}. Correlate incident telemetry, query diagnostics, and propose verified remediations.",
+        "temperature": 0.2,
+        "model": "Gemini 2.5 Pro (ADK 2.8)",
+        "skills": {
+            "postgres_pool_analyzer": True,
+            "deadlock_cycle_grapher": True,
+            "k8s_oom_profiler": True,
+            "jwks_cache_stampede": False,
+            "sendgrid_failover": False
+        },
+        "datasources": [
+            {"id": "pg-ds", "name": "PostgreSQL Database", "type": "DATABASE", "env": "prod", "host": f"{pkey.lower()}-db.internal:5432", "status": "CONNECTED"},
+            {"id": "dd-ds", "name": "Datadog Logs API", "type": "OBSERVABILITY", "env": "prod", "host": "api.datadoghq.com", "status": "CONNECTED"},
+            {"id": "k8s-ds", "name": "Kubernetes Cluster", "type": "COMPUTE", "env": "prod", "host": "k8s-cluster:6443", "status": "CONNECTED"}
+        ]
+    }
+    PROJECT_CONFIGURATIONS[pkey] = default_conf
+    return default_conf
+
+
+@router.post("/projects/{project_key}/configuration")
+async def update_project_configuration(project_key: str, req: ProjectConfigurationRequest):
+    """Save user-updated project configuration, JQL, team members, prompt, and connector bindings."""
+    pkey = project_key.upper()
+    conf = await get_project_configuration(pkey)
+    req_dict = req.dict(exclude_unset=True)
+    if "jira_queues" in req_dict and req_dict["jira_queues"]:
+        req_dict["jira_queue"] = req_dict["jira_queues"][0]
+    conf.update(req_dict)
+    PROJECT_CONFIGURATIONS[pkey] = conf
+    return {
+        "status": "SUCCESS",
+        "project_key": pkey,
+        "message": f"Project {pkey} setup and configuration updated successfully.",
+        "configuration": conf
+    }
+
+
+class RunbookUploadRequest(BaseModel):
+    title: str
+    category: str = "INCIDENT_RUNBOOK"
+    content_markdown: str
+    solution_steps: Optional[List[str]] = None
+    node_id: Optional[str] = None
+
+
+@router.get("/projects/{project_key}/runbooks")
+async def get_project_runbooks(project_key: str):
+    """List runbooks and OKF knowledge nodes associated with a project."""
+    nodes = await OKFService.list_knowledge_nodes()
+    # Also include seeded runbooks
+    return nodes
+
+
+@router.post("/projects/{project_key}/runbooks")
+async def upload_project_runbook(project_key: str, req: RunbookUploadRequest):
+    """Upload and index a new incident runbook into the OKF Knowledge Fabric for this project."""
+    created = await OKFService.create_knowledge_node(
+        title=req.title,
+        category=req.category,
+        content_markdown=req.content_markdown,
+        solution_steps=req.solution_steps,
+        node_id=req.node_id
+    )
+    return {
+        "status": "SUCCESS",
+        "project_key": project_key.upper(),
+        "runbook": created,
+        "message": f"Runbook '{req.title}' successfully indexed into {project_key} OKF Knowledge Fabric."
+    }
+
+

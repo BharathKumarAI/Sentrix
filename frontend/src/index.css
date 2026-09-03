@@ -570,3 +570,69 @@ html, body {
   outline: 2px solid var(--prism-magenta);
   outline-offset: 2px;
 }
+
+/* ========================================================================
+   LIVE TRIAGE BOARD ANIMATION & HIGHLIGHT
+   ======================================================================== */
+@keyframes liveTriagePulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.35), inset 0 0 6px rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 22px rgba(16, 185, 129, 0.75), inset 0 0 12px rgba(16, 185, 129, 0.3);
+    border-color: rgba(16, 185, 129, 0.95);
+  }
+}
+
+@keyframes radarPing {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.9;
+  }
+}
+
+.live-triage-nav-tab {
+  position: relative;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(13, 19, 48, 0.95) 100%) !important;
+  border: 1.5px solid rgba(16, 185, 129, 0.6) !important;
+  animation: liveTriagePulse 2.4s infinite ease-in-out !important;
+}
+
+.live-triage-nav-tab:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(13, 19, 48, 1) 100%) !important;
+  border-color: rgba(16, 185, 129, 0.9) !important;
+}
+
+.radar-ping-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 10px #10b981;
+  animation: radarPing 1.8s infinite ease-in-out;
+}
+
+@keyframes progressShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.thinking-progress-bar {
+  background: linear-gradient(90deg, #ec4899 0%, #8b5cf6 50%, #10b981 100%);
+  background-size: 200% 100%;
+  animation: progressShimmer 2s infinite linear;
+}

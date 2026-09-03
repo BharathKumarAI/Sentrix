@@ -71,29 +71,73 @@ export function ParameterStudio({ activeProject, isAdmin = true }) {
   const sections = ["ALL", ...new Set(params.map(p => p.ui_section).filter(Boolean))];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px", padding: "20px" }}>
+    <div style={{
+      padding: "24px 32px",
+      display: "flex",
+      flexDirection: "column",
+      gap: "20px",
+      overflowY: "auto",
+      minHeight: "100%",
+      boxSizing: "border-box"
+    }}>
       
-      {/* Header */}
-      <div className="glass-panel" style={{ padding: "20px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Sliders size={18} color="var(--accent-violet)" />
-            <h2 style={{ fontSize: "18px" }}>Hierarchical Tool-Wise Parameter Studio</h2>
+      {/* Framework Page Hero Card */}
+      <div
+        className="prism-card"
+        style={{
+          padding: "20px 24px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "16px",
+          background: "var(--bg-elevated)",
+          border: "1px solid var(--border-subtle)"
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <div
+            style={{
+              width: "48px",
+              height: "48px",
+              borderRadius: "12px",
+              background: "var(--prism-gradient)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#fff",
+              boxShadow: "0 0 18px var(--prism-glow)"
+            }}
+          >
+            <Sliders size={24} />
           </div>
-          <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "4px" }}>
-            Manages Platform-Only, Project-Overridable, and User-Customized configuration boundaries.
-          </p>
+
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink-tertiary)", textTransform: "uppercase" }}>
+                {activeProject?.project_key || "BILLING"} • CONFIGURATION PARAMETERS
+              </span>
+              <span className="badge badge-teal">Zero Hardcoding</span>
+              <span className="badge badge-magenta">3-Tier Hierarchy</span>
+            </div>
+            <h1 style={{ fontSize: "20px", fontWeight: 700, color: "var(--ink-primary)", marginTop: "4px" }}>
+              Hierarchical Tool-Wise Parameter Studio
+            </h1>
+            <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "2px" }}>
+              Manages Platform-Only, Project-Overridable, and User-Customized configuration boundaries.
+            </p>
+          </div>
         </div>
 
         {/* Legend */}
-        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-          <span className="badge badge-rose" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-            <Lock size={10} /> PLATFORM ONLY (Admin)
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          <span className="badge badge-magenta" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+            <Lock size={10} /> PLATFORM ONLY
           </span>
           <span className="badge badge-teal" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
             <Layers size={10} /> PROJECT OVERRIDABLE
           </span>
-          <span className="badge badge-violet" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+          <span className="badge badge-amber" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
             <User size={10} /> USER CUSTOMIZED
           </span>
         </div>

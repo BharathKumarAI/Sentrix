@@ -191,17 +191,56 @@ export function AdminConnectorsPage() {
       overflowY: "auto",
       height: "calc(100vh - 64px)"
     }}>
-      {/* Top Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "14px" }}>
-        <div>
-          <h1 style={{ fontSize: "22px", fontWeight: "800", color: "#fff" }}>Connectors</h1>
-          <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "2px" }}>
-            Manage external systems, tools, and data sources connected to the platform.
-          </p>
+      {/* Framework Page Hero Card */}
+      <div
+        className="prism-card"
+        style={{
+          padding: "20px 24px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "16px",
+          background: "var(--bg-elevated)",
+          border: "1px solid var(--border-subtle)"
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <div
+            style={{
+              width: "48px",
+              height: "48px",
+              borderRadius: "12px",
+              background: "var(--prism-gradient)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#fff",
+              boxShadow: "0 0 18px var(--prism-glow)"
+            }}
+          >
+            <Server size={24} />
+          </div>
+
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink-tertiary)", textTransform: "uppercase" }}>
+                PLATFORM • CONNECTORS & TOOLS
+              </span>
+              <span className="badge badge-teal">Tool Broker Guarded</span>
+              <span className="badge badge-magenta">Active Handshakes</span>
+            </div>
+            <h1 style={{ fontSize: "20px", fontWeight: 700, color: "var(--ink-primary)", marginTop: "4px" }}>
+              Enterprise Connectors & Tool Catalog
+            </h1>
+            <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "2px" }}>
+              Manage external systems, observability platforms, databases, and compute clusters connected to the platform.
+            </p>
+          </div>
         </div>
 
-        <button className="btn-primary" onClick={() => setShowModal(true)}>
-          <Plus size={16} /> New Connector
+        <button className="btn-primary" onClick={() => setShowModal(true)} style={{ gap: "6px" }}>
+          <Plus size={15} /> New Connector
         </button>
       </div>
 

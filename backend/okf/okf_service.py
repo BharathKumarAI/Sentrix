@@ -127,3 +127,37 @@ class OKFService:
                 }
                 for n in nodes
             ]
+
+    @classmethod
+    async def create_knowledge_node(
+        cls,
+        title: str,
+        category: str,
+        content_markdown: str,
+        solution_steps: Optional[List[str]] = None,
+        node_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Create and persist a new organizational runbook or knowledge node."""
+        nid = node_id or f"OKF-RUN-{uuid.uuid4().hex[:6].upper()}"
+        async with get_async_db() as db:
+            node = OkfKnowledgeNode(
+                id=nid,
+                title=title,
+                category=category,
+                content_markdown=content_markdown,
+                solution_steps_json=solution_steps or [],
+                helpful_score=10,
+                usage_count=0
+            )
+            node.row_hash = node.calculate_row_hash({"id": nid, "title": title})
+            db.add(node)
+            logger.info(f"[OKF Knowledge Fabric] Created runbook node {nid}: {title}")
+            return {
+                "id": node.id,
+                "title": node.title,
+                "category": node.category,
+                "content": node.content_markdown,
+                "solution_steps": node.solution_steps_json,
+                "helpful_score": node.helpful_score,
+                "usage_count": node.usage_count
+            }

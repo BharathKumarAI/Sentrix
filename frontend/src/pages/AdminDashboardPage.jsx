@@ -57,12 +57,59 @@ export function AdminDashboardPage() {
       overflowY: "auto",
       height: "calc(100vh - 64px)"
     }}>
-      {/* Title */}
-      <div>
-        <h1 style={{ fontSize: "22px", fontWeight: "800", color: "var(--ink-primary)" }}>Admin Dashboard</h1>
-        <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "2px" }}>
-          Platform-wide operational telemetry, fleet status, and resource consumption.
-        </p>
+      {/* Framework Page Hero Card */}
+      <div
+        className="prism-card"
+        style={{
+          padding: "20px 24px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "16px",
+          background: "var(--bg-elevated)",
+          border: "1px solid var(--border-subtle)"
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <div
+            style={{
+              width: "48px",
+              height: "48px",
+              borderRadius: "12px",
+              background: "var(--prism-gradient)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#fff",
+              boxShadow: "0 0 18px var(--prism-glow)"
+            }}
+          >
+            <Activity size={24} />
+          </div>
+
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink-tertiary)", textTransform: "uppercase" }}>
+                PLATFORM CONTROL PLANE
+              </span>
+              <span className="badge badge-teal">Fleet Health: 99.98%</span>
+              <span className="badge badge-magenta">56 Active Projects</span>
+            </div>
+            <h1 style={{ fontSize: "20px", fontWeight: 700, color: "var(--ink-primary)", marginTop: "4px" }}>
+              Enterprise Admin Dashboard
+            </h1>
+            <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "2px" }}>
+              Platform-wide operational telemetry, fleet status, multi-tenant governance, and global resource consumption.
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <button className="btn-secondary" style={{ fontSize: "12px", gap: "6px" }}>
+            <Activity size={14} /> Run Fleet Health Probe
+          </button>
+        </div>
       </div>
 
       {/* 5 KPI Stat Cards */}

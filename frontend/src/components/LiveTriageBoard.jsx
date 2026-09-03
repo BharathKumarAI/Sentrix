@@ -604,8 +604,8 @@ export function LiveTriageBoard({ activeProject, activeEnvironment }) {
               <span style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                 {projectKey} • OPERATIONS
               </span>
-              <span className="badge badge-teal">
-                <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--accent-teal)" }} />
+              <span className="badge badge-teal" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <span className="radar-ping-dot" style={{ width: "6px", height: "6px" }} />
                 Live Telemetry Active
               </span>
               <span className="badge badge-magenta">ADK 2.8 Autonomous Triage</span>

@@ -115,17 +115,56 @@ export function AdminPromptsPage() {
       overflowY: "auto",
       height: "calc(100vh - 64px)"
     }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
-        <div>
-          <h1 style={{ fontSize: "22px", fontWeight: "800", color: "#fff" }}>Prompts & Skills</h1>
-          <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "2px" }}>
-            Manage reusable agent prompt templates and skill directives across the enterprise.
-          </p>
+      {/* Framework Page Hero Card */}
+      <div
+        className="prism-card"
+        style={{
+          padding: "20px 24px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "16px",
+          background: "var(--bg-elevated)",
+          border: "1px solid var(--border-subtle)"
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <div
+            style={{
+              width: "48px",
+              height: "48px",
+              borderRadius: "12px",
+              background: "var(--prism-gradient)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#fff",
+              boxShadow: "0 0 18px var(--prism-glow)"
+            }}
+          >
+            <FileText size={24} />
+          </div>
+
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink-tertiary)", textTransform: "uppercase" }}>
+                PLATFORM • SYSTEM PROMPTS & SKILLS
+              </span>
+              <span className="badge badge-teal">Enterprise Templates</span>
+              <span className="badge badge-magenta">ADK Directives</span>
+            </div>
+            <h1 style={{ fontSize: "20px", fontWeight: 700, color: "var(--ink-primary)", marginTop: "4px" }}>
+              Enterprise System Prompts & Skill Directives
+            </h1>
+            <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "2px" }}>
+              Manage reusable autonomous agent prompt templates, domain guidelines, and diagnostic skill directives across the fleet.
+            </p>
+          </div>
         </div>
 
-        <button className="btn-primary">
-          <Plus size={16} /> New Prompt
+        <button className="btn-primary" style={{ gap: "6px" }}>
+          <Plus size={15} /> New System Prompt
         </button>
       </div>
 

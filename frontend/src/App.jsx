@@ -2,9 +2,30 @@ import React, { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { PrismShell } from "./components/layout/PrismShell";
 import { ProjectOverviewPage } from "./pages/ProjectOverviewPage";
+import { ProjectAgentsPage } from "./pages/ProjectAgentsPage";
+import { ProjectWorkflowsPage } from "./pages/ProjectWorkflowsPage";
+import { ProjectToolsPage } from "./pages/ProjectToolsPage";
+import { ProjectTicketsPage } from "./pages/ProjectTicketsPage";
+import { ProjectRunsPage } from "./pages/ProjectRunsPage";
+import { ProjectMetricsPage } from "./pages/ProjectMetricsPage";
+import { ProjectReportsPage } from "./pages/ProjectReportsPage";
+import { ProjectFeedbackPage } from "./pages/ProjectFeedbackPage";
+import { ProjectSetupStudioPage } from "./pages/ProjectSetupStudioPage";
+
+import { AdminOverviewPage } from "./pages/AdminOverviewPage";
 import { AdminDashboardPage } from "./pages/AdminDashboardPage";
 import { AdminConnectorsPage } from "./pages/AdminConnectorsPage";
 import { AdminPromptsPage } from "./pages/AdminPromptsPage";
+import { AdminProjectsFleetPage } from "./pages/AdminProjectsFleetPage";
+import { AdminSkillsCatalogPage } from "./pages/AdminSkillsCatalogPage";
+import { AdminSystemHealthPage } from "./pages/AdminSystemHealthPage";
+import { AdminAuditLogsPage } from "./pages/AdminAuditLogsPage";
+import { AdminModelProvidersPage } from "./pages/AdminModelProvidersPage";
+import { AdminApiKeysPage } from "./pages/AdminApiKeysPage";
+import { AdminBillingUsagePage } from "./pages/AdminBillingUsagePage";
+import { AdminUsersPage } from "./pages/AdminUsersPage";
+import { AdminSecurityPolicyPage } from "./pages/AdminSecurityPolicyPage";
+
 import { AutoTriageHub } from "./components/AutoTriageHub";
 import { InvestigationStream } from "./components/InvestigationStream";
 import { ActionProposalCard } from "./components/ActionProposalCard";
@@ -60,19 +81,26 @@ export function App() {
   useEffect(() => {
     loadProjects();
     loadPendingActions();
+    const interval = setInterval(loadPendingActions, 10000);
+    return () => clearInterval(interval);
   }, []);
 
-  const handleApproveAction = async (id) => {
-    await approveAction(id, {
-      user_id: "usr_admin_01",
-      delegated_identity: delegatedIdentity,
-    });
-    await loadPendingActions();
+  const handleApproveAction = async (actionId, options) => {
+    try {
+      await approveAction(actionId, options);
+      loadPendingActions();
+    } catch (e) {
+      console.error("Failed to approve action", e);
+    }
   };
 
-  const handleRejectAction = async (id) => {
-    await rejectAction(id, "Rejected by investigator");
-    await loadPendingActions();
+  const handleRejectAction = async (actionId) => {
+    try {
+      await rejectAction(actionId);
+      loadPendingActions();
+    } catch (e) {
+      console.error("Failed to reject action", e);
+    }
   };
 
   return (
@@ -97,15 +125,21 @@ export function App() {
           }
         >
           <Route index element={<Navigate to="/admin/overview" replace />} />
-          <Route path="overview" element={<AdminDashboardPage />} />
+          <Route path="overview" element={<AdminOverviewPage projects={projects} onOpenNewProjectModal={() => setShowNewProjectModal(true)} />} />
           <Route path="dashboard" element={<AdminDashboardPage />} />
-          <Route path="connectors" element={<AdminConnectorsPage />} />
+          <Route path="projects" element={<AdminProjectsFleetPage />} />
+          <Route path="skills" element={<AdminSkillsCatalogPage />} />
           <Route path="prompts" element={<AdminPromptsPage />} />
-          <Route path="projects" element={<AdminDashboardPage />} />
-          <Route path="skills" element={<AdminPromptsPage />} />
-          <Route path="health" element={<AdminDashboardPage />} />
-          <Route path="audit" element={<AdminDashboardPage />} />
+          <Route path="connectors" element={<AdminConnectorsPage />} />
           <Route path="environments" element={<EnvironmentMatrixEditor activeProject={activeProject} />} />
+          <Route path="models" element={<AdminModelProvidersPage />} />
+          <Route path="keys" element={<AdminApiKeysPage />} />
+          <Route path="health" element={<AdminSystemHealthPage />} />
+          <Route path="audit" element={<AdminAuditLogsPage />} />
+          <Route path="billing" element={<AdminBillingUsagePage />} />
+          <Route path="reports" element={<ProjectReportsPage activeProject={activeProject} />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="security" element={<AdminSecurityPolicyPage />} />
         </Route>
 
         {/* Project Routes (/p/:projectKey/*) */}
@@ -155,11 +189,11 @@ export function App() {
                 <div className="prism-card" style={{ padding: "20px 24px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <ShieldCheck size={18} color="var(--prism-pink)" />
-                    <h2 style={{ fontSize: "18px", color: "#fff" }}>Governed Action Proposals Desk</h2>
+                    <h2 style={{ fontSize: "18px", color: "var(--ink-primary)" }}>Governed Action Proposals Desk</h2>
                     <span className="badge badge-magenta">Cryptographic Write Lock</span>
                   </div>
                   <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "4px" }}>
-                    All high-impact mutations (Jira comments, Kubernetes pod restarts) require human authorization under delegated identity.
+                    All high-impact mutations (Jira comments, database pool scaling, Kubernetes pod restarts) require human authorization under delegated identity.
                   </p>
                 </div>
 
@@ -183,13 +217,17 @@ export function App() {
               </div>
             }
           />
-          <Route path="tools" element={<AdminConnectorsPage />} />
-          <Route path="agents" element={<ProjectOverviewPage activeProject={activeProject} />} />
-          <Route path="workflows" element={<ProjectOverviewPage activeProject={activeProject} />} />
-          <Route path="tickets" element={<ProjectOverviewPage activeProject={activeProject} />} />
-          <Route path="runs" element={<ProjectOverviewPage activeProject={activeProject} />} />
+          <Route path="tools" element={<ProjectToolsPage activeProject={activeProject} activeEnvironment={activeEnvironment} />} />
+          <Route path="agents" element={<ProjectAgentsPage activeProject={activeProject} />} />
+          <Route path="workflows" element={<ProjectWorkflowsPage activeProject={activeProject} />} />
+          <Route path="tickets" element={<ProjectTicketsPage activeProject={activeProject} />} />
+          <Route path="runs" element={<ProjectRunsPage activeProject={activeProject} />} />
           <Route path="knowledge" element={<OkfKnowledgeBrowser activeProject={activeProject} />} />
           <Route path="board" element={<LiveTriageBoard activeProject={activeProject} activeEnvironment={activeEnvironment} />} />
+          <Route path="metrics" element={<ProjectMetricsPage activeProject={activeProject} />} />
+          <Route path="reports" element={<ProjectReportsPage activeProject={activeProject} />} />
+          <Route path="feedback" element={<ProjectFeedbackPage activeProject={activeProject} />} />
+          <Route path="setup" element={<ProjectSetupStudioPage activeProject={activeProject} onProjectUpdated={loadProjects} />} />
           <Route path="environments" element={<EnvironmentMatrixEditor activeProject={activeProject} />} />
           <Route path="parameters" element={<ParameterStudio activeProject={activeProject} isAdmin={true} />} />
           <Route path="settings" element={<ProjectCustomizationView activeProject={activeProject} />} />
@@ -203,8 +241,11 @@ export function App() {
       {showNewProjectModal && (
         <NewProjectModal
           onClose={() => setShowNewProjectModal(false)}
-          onProjectCreated={() => {
+          onProjectCreated={(newProj) => {
             loadProjects();
+            if (newProj && newProj.project_key) {
+              window.location.href = `/p/${newProj.project_key}/setup`;
+            }
           }}
         />
       )}

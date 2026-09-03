@@ -28,7 +28,10 @@ import {
   ArrowRightLeft,
   Search,
   CheckCircle2,
-  Kanban
+  Kanban,
+  BarChart3,
+  ThumbsUp,
+  Plus
 } from "lucide-react";
 import { BrandLogo } from "../BrandLogo";
 
@@ -40,11 +43,19 @@ export function PrismSidebar({ activeProject, projects, onSelectProject }) {
   const isAdmin = location.pathname.startsWith("/admin");
   const projectKey = activeProject?.project_key || "BILLING";
 
-  // Project mode nav groups — original icons restored
+  // Project mode nav groups — Live Triage Board pushed to the very top with live pulsing animation
   const projectNav = [
     {
-      group: "MAIN",
+      group: "TRIAGE & MISSION CONTROL",
       items: [
+        { 
+          label: "Live Triage Board", 
+          path: `/p/${projectKey}/board`, 
+          icon: Kanban, 
+          badge: "LIVE SRE", 
+          badgeColor: "badge-teal",
+          isLiveGlow: true 
+        },
         { label: "Overview", path: `/p/${projectKey}/overview`, icon: Home },
         { label: "Auto-Triage Hub", path: `/p/${projectKey}/triage`, icon: Zap, badge: "ADK 2.8" },
         { label: "Investigation Stream", path: `/p/${projectKey}/investigations`, icon: MessageSquare },
@@ -62,15 +73,23 @@ export function PrismSidebar({ activeProject, projects, onSelectProject }) {
     {
       group: "OPERATIONS",
       items: [
-        { label: "Live Triage Board", path: `/p/${projectKey}/board`, icon: Kanban, badge: "Live", badgeColor: "badge-teal" },
         { label: "Tickets & Incidents", path: `/p/${projectKey}/tickets`, icon: Ticket },
         { label: "Runs & Timeline", path: `/p/${projectKey}/runs`, icon: PlayCircle },
         { label: "Action Proposals", path: `/p/${projectKey}/actions`, icon: ShieldCheck, badge: "Write Lock", badgeColor: "badge-magenta" },
       ]
     },
     {
+      group: "INSIGHTS & GOVERNANCE",
+      items: [
+        { label: "Metrics & Analytics", path: `/p/${projectKey}/metrics`, icon: BarChart3 },
+        { label: "Reports & Digests", path: `/p/${projectKey}/reports`, icon: FileText, badge: "Cadence", badgeColor: "badge-teal" },
+        { label: "SRE Feedback Loop", path: `/p/${projectKey}/feedback`, icon: ThumbsUp },
+      ]
+    },
+    {
       group: "PROJECT",
       items: [
+        { label: "Setup & Studio", path: `/p/${projectKey}/setup`, icon: Wrench, badge: "Config", badgeColor: "badge-magenta" },
         { label: "Environments Matrix", path: `/p/${projectKey}/environments`, icon: Network },
         { label: "Parameter Studio", path: `/p/${projectKey}/parameters`, icon: Sliders },
         { label: "Settings & Instructions", path: `/p/${projectKey}/settings`, icon: Settings },
@@ -90,7 +109,8 @@ export function PrismSidebar({ activeProject, projects, onSelectProject }) {
     {
       group: "PLATFORM",
       items: [
-        { label: "Projects Fleet", path: "/admin/projects", icon: Layers },
+        { label: "Projects Fleet", path: "/admin/projects", icon: Layers, badge: "Fleet", badgeColor: "badge-teal" },
+        { label: "Add Project", path: "/admin/projects?create=true", icon: Plus, badge: "New", badgeColor: "badge-magenta" },
         { label: "Skills", path: "/admin/skills", icon: Cpu },
         { label: "Prompts", path: "/admin/prompts", icon: FileText },
         { label: "Connectors Catalog", path: "/admin/connectors", icon: Server },
@@ -105,6 +125,7 @@ export function PrismSidebar({ activeProject, projects, onSelectProject }) {
         { label: "System Health", path: "/admin/health", icon: CheckCircle2 },
         { label: "Audit Logs", path: "/admin/audit", icon: ShieldCheck },
         { label: "Usage & Billing", path: "/admin/billing", icon: Sliders },
+        { label: "Reports & Digests", path: "/admin/reports", icon: FileText },
       ]
     },
     {
@@ -119,19 +140,25 @@ export function PrismSidebar({ activeProject, projects, onSelectProject }) {
   const currentNav = isAdmin ? adminNav : projectNav;
 
   return (
-    <aside style={{
-      width: collapsed ? "70px" : "240px",
-      minWidth: collapsed ? "70px" : "240px",
-      height: "100vh",
-      background: "var(--bg-sidebar)",
-      borderRight: "1px solid var(--border-subtle)",
-      display: "flex",
-      flexDirection: "column",
-      justifyContent: "space-between",
-      transition: "width 0.2s var(--ease)",
-      zIndex: 40,
-      userSelect: "none"
-    }}>
+    <aside 
+      onClick={() => {
+        if (collapsed) setCollapsed(false);
+      }}
+      title={collapsed ? "Click anywhere to expand sidebar" : undefined}
+      style={{
+        width: collapsed ? "70px" : "240px",
+        minWidth: collapsed ? "70px" : "240px",
+        height: "100vh",
+        background: "var(--bg-sidebar)",
+        borderRight: "1px solid var(--border-subtle)",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        transition: "width 0.2s var(--ease)",
+        zIndex: 40,
+        userSelect: "none",
+        cursor: collapsed ? "pointer" : "default"
+      }}>
       {/* Top Brand Area */}
       <div>
         <div 
@@ -213,6 +240,7 @@ export function PrismSidebar({ activeProject, projects, onSelectProject }) {
                       key={item.path}
                       to={item.path}
                       title={collapsed ? item.label : undefined}
+                      className={item.isLiveGlow && !isActive ? "live-triage-nav-tab" : ""}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -222,21 +250,35 @@ export function PrismSidebar({ activeProject, projects, onSelectProject }) {
                         borderRadius: "var(--radius-sm)",
                         textDecoration: "none",
                         fontSize: "12.5px",
-                        fontWeight: isActive ? "600" : "500",
-                        color: isActive ? "#ffffff" : "var(--ink-secondary)",
+                        fontWeight: isActive ? "700" : item.isLiveGlow ? "700" : "500",
+                        color: isActive ? "#ffffff" : item.isLiveGlow ? "var(--accent-teal)" : "var(--ink-secondary)",
                         background: isActive ? "var(--prism-gradient)" : "transparent",
                         boxShadow: isActive ? "0 4px 14px -2px var(--prism-glow)" : "none",
-                        transition: "all 0.15s ease"
+                        transition: "all 0.15s ease",
+                        marginBottom: item.isLiveGlow ? "4px" : "0px"
                       }}
                     >
-                      <Icon size={16} color={isActive ? "#ffffff" : "currentColor"} />
+                      <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                        <Icon size={16} color={isActive ? "#ffffff" : item.isLiveGlow ? "var(--accent-teal)" : "currentColor"} />
+                        {item.isLiveGlow && !isActive && (
+                          <span
+                            className="radar-ping-dot"
+                            style={{
+                              position: "absolute",
+                              top: "-3px",
+                              right: "-3px"
+                            }}
+                          />
+                        )}
+                      </div>
                       {!collapsed && (
-                        <span style={{ flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        <span style={{ flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: item.isLiveGlow ? 700 : undefined }}>
                           {item.label}
                         </span>
                       )}
                       {!collapsed && item.badge && !isActive && (
-                        <span className={`badge ${item.badgeColor || "badge-magenta"}`} style={{ fontSize: "9px", padding: "1px 5px" }}>
+                        <span className={`badge ${item.badgeColor || "badge-magenta"}`} style={{ fontSize: "9px", padding: "2px 6px", display: "flex", alignItems: "center", gap: "4px" }}>
+                          {item.isLiveGlow && <span className="radar-ping-dot" style={{ width: "5px", height: "5px" }} />}
                           {item.badge}
                         </span>
                       )}

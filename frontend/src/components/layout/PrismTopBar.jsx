@@ -202,6 +202,18 @@ export function PrismTopBar({
 
       {/* Right: Actions & User Avatar */}
       <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+        {/* Admin Quick Add Project Button */}
+        {isAdmin && (
+          <button
+            onClick={onOpenNewProjectModal}
+            className="btn-primary"
+            style={{ padding: "6px 12px", fontSize: "12px", gap: "6px" }}
+            title="Register New Enterprise Project"
+          >
+            <Plus size={14} /> New Project
+          </button>
+        )}
+
         {/* Global Theme Switcher (Light / Dark) */}
         <button
           className="btn-ghost"
