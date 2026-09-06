@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ThumbsUp,
   ThumbsDown,
@@ -15,15 +15,19 @@ import {
   Sliders,
   Check
 } from "lucide-react";
+import { fetchProjectFeedback, submitFeedback, fetchBoardTickets } from "../api/client";
 
 export function ProjectFeedbackPage({ activeProject }) {
-  const projectKey = activeProject?.project_key || "BILLING";
-  const [selectedTicketKey, setSelectedTicketKey] = useState("BILL-1049");
+  const projectKey = activeProject?.project_key || "";
+  const [selectedTicketKey, setSelectedTicketKey] = useState("");
+  const [availableTickets, setAvailableTickets] = useState([]);
   const [rating, setRating] = useState("UP"); // "UP" | "DOWN"
   const [selectedTags, setSelectedTags] = useState(["Root Cause Accuracy", "Suggested Fix Relevance"]);
   const [commentText, setCommentText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedMessage, setSubmittedMessage] = useState(false);
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const availableTags = [
     "Root Cause Accuracy",
@@ -34,38 +38,40 @@ export function ProjectFeedbackPage({ activeProject }) {
     "Missing Runbook Citation"
   ];
 
-  const [feedbacks, setFeedbacks] = useState([
-    {
-      id: "fb-1",
-      ticketKey: "BILL-1049",
-      rating: "UP",
-      author: "Sarah K. (Staff SRE)",
-      time: "10m ago",
-      tags: ["Root Cause Accuracy", "Suggested Fix Relevance"],
-      comment: "HikariCP pool limit diagnosis was spot-on. Hot-patch pool bump to 50 eliminated the 504 timeouts under load test.",
-      status: "CALIBRATED"
-    },
-    {
-      id: "fb-2",
-      ticketKey: "DB-3030",
-      rating: "UP",
-      author: "Marcus T. (Principal DBA)",
-      time: "35m ago",
-      tags: ["Root Cause Accuracy", "Tool Query Efficiency"],
-      comment: "The pg_locks cycle detection graph query was very accurate. Session PID 10482 was indeed the root culprit.",
-      status: "CALIBRATED"
-    },
-    {
-      id: "fb-3",
-      ticketKey: "AUTH-2091",
-      rating: "UP",
-      author: "David L. (Security Lead)",
-      time: "2h ago",
-      tags: ["Suggested Fix Relevance"],
-      comment: "Good suggestion to switch JWKS cache to stale-while-revalidate to eliminate the 60s thundering herd misses.",
-      status: "CALIBRATED"
-    }
-  ]);
+  const loadData = () => {
+    setIsLoading(true);
+    Promise.all([
+      fetchProjectFeedback(projectKey).catch(() => []),
+      fetchBoardTickets(projectKey).catch(() => [])
+    ])
+      .then(([fbData, ticketData]) => {
+        if (Array.isArray(ticketData) && ticketData.length > 0) {
+          setAvailableTickets(ticketData);
+          if (!selectedTicketKey) {
+            setSelectedTicketKey(ticketData[0].key);
+          }
+        }
+        if (Array.isArray(fbData)) {
+          setFeedbacks(
+            fbData.map((item) => ({
+              id: item.id,
+              ticketKey: item.source_id || "GENERAL",
+              rating: item.signal_type === "VERIFIED" || item.feedback_score > 0 ? "UP" : "DOWN",
+              author: item.user_id || "SRE Engineer",
+              time: item.submitted_at ? new Date(item.submitted_at).toLocaleString() : null,
+              tags: item.notes?.startsWith("[Category:") ? [item.notes.split("]")[0].replace("[Category:", "").trim()] : ["Quality Calibration"],
+              comment: item.notes?.replace(/\[Category:.*?\]/g, "").trim() || "No additional commentary provided.",
+              status: "RECORDED"
+            }))
+          );
+        }
+      })
+      .finally(() => setIsLoading(false));
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [projectKey]);
 
   const toggleTag = (tag) => {
     setSelectedTags((prev) =>
@@ -73,28 +79,30 @@ export function ProjectFeedbackPage({ activeProject }) {
     );
   };
 
-  const handleSubmitFeedback = (e) => {
+  const handleSubmitFeedback = async (e) => {
     e.preventDefault();
     if (!commentText.trim()) return;
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      const newFb = {
-        id: `fb-${Date.now()}`,
-        ticketKey: selectedTicketKey,
-        rating: rating,
-        author: "Current SRE (Delegated)",
-        time: "Just now",
-        tags: [...selectedTags],
-        comment: commentText,
-        status: "RECORDED"
-      };
-      setFeedbacks([newFb, ...feedbacks]);
+    try {
+      await submitFeedback({
+        source_type: "INCIDENT",
+        source_id: selectedTicketKey || "GENERAL",
+        user_id: "sre.operator@company.com",
+        signal_type: rating === "UP" ? "VERIFIED" : "REJECTED",
+        score: rating === "UP" ? 5 : 1,
+        notes: commentText,
+        category: selectedTags.join(", ")
+      });
       setCommentText("");
-      setIsSubmitting(false);
       setSubmittedMessage(true);
-      setTimeout(() => setSubmittedMessage(false), 3000);
-    }, 600);
+      setTimeout(() => setSubmittedMessage(false), 3500);
+      loadData();
+    } catch (err) {
+      console.error("Failed to submit feedback:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -129,42 +137,36 @@ export function ProjectFeedbackPage({ activeProject }) {
               width: "48px",
               height: "48px",
               borderRadius: "12px",
-              background: "var(--prism-gradient)",
+              background: "linear-gradient(135deg, rgba(236,72,153,0.15), rgba(139,92,246,0.15))",
+              border: "1px solid rgba(236,72,153,0.3)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "#fff",
-              boxShadow: "0 0 18px var(--prism-glow)"
+              color: "var(--prism-pink)"
             }}
           >
-            <ThumbsUp size={24} />
+            <MessageSquare size={24} />
           </div>
-
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-              <span style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink-tertiary)", textTransform: "uppercase" }}>
-                {projectKey} • CALIBRATION
-              </span>
-              <span className="badge badge-teal">RLHF Continuous Learning</span>
-              <span className="badge badge-magenta">97.2% Human SRE Approval</span>
-            </div>
-            <h1 style={{ fontSize: "20px", fontWeight: 700, color: "var(--ink-primary)", marginTop: "4px" }}>
-              SRE Auto-Triage Feedback & RLHF Loop
+            <h1 style={{ fontSize: "20px", fontWeight: 700, margin: 0, color: "var(--ink-primary)" }}>
+              Human-in-the-Loop SRE Calibration ({projectKey})
             </h1>
             <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "2px" }}>
-              Record domain engineer evaluation on AI incident diagnoses, query generation precision, and remediation runbooks.
+              Rate autonomous triage root cause accuracy, report false positives, and continuously improve agent prompt instructions.
             </p>
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <span className="badge badge-teal">482 Total Feedbacks</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <button onClick={loadData} className="btn-secondary" style={{ padding: "6px 12px", fontSize: "12px", gap: "6px" }}>
+            <RotateCw size={13} className={isLoading ? "spin" : ""} /> Refresh Signals
+          </button>
         </div>
       </div>
 
-      {/* Main Grid: Submission Form on Left, Audit Stream on Right */}
-      <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1.2fr", gap: "20px", alignItems: "start" }}>
-        {/* Left: Interactive Feedback Form */}
+      {/* Main Grid: Feedback Submission Form & Feedback History */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr", gap: "20px" }}>
+        {/* Left: Interactive Feedback Card */}
         <div
           className="prism-card"
           style={{
@@ -173,14 +175,14 @@ export function ProjectFeedbackPage({ activeProject }) {
             border: "1px solid var(--border-card)",
             display: "flex",
             flexDirection: "column",
-            gap: "16px"
+            gap: "18px"
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--ink-primary)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Sparkles size={16} color="var(--prism-pink)" />
+            <h3 style={{ fontSize: "15px", fontWeight: 700, margin: 0, color: "var(--ink-primary)" }}>
               Submit Triage Calibration Feedback
             </h3>
-            <span className="badge badge-magenta">Human-in-the-Loop</span>
           </div>
 
           <form onSubmit={handleSubmitFeedback} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
@@ -202,11 +204,15 @@ export function ProjectFeedbackPage({ activeProject }) {
                   outline: "none"
                 }}
               >
-                <option value="BILL-1049">BILL-1049 • Payment gateway timeout on recurring charges</option>
-                <option value="AUTH-2091">AUTH-2091 • Auth token signature verification latency spike</option>
-                <option value="DB-3030">DB-3030 • Deadlock in orders_allocation lock queue</option>
-                <option value="NOTIF-501">NOTIF-501 • Email delivery queue backlog exceeding SLA</option>
-                <option value="INFRA-880">INFRA-880 • Redis cluster node failover completed</option>
+                {availableTickets.length > 0 ? (
+                  availableTickets.map((t) => (
+                    <option key={t.key} value={t.key}>
+                      {t.key} • {t.title}
+                    </option>
+                  ))
+                ) : (
+                  <option value="GENERAL">General Project Telemetry Feedback</option>
+                )}
               </select>
             </div>
 
@@ -230,12 +236,13 @@ export function ProjectFeedbackPage({ activeProject }) {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    gap: "6px",
-                    fontWeight: 600,
-                    fontSize: "12px"
+                    gap: "8px",
+                    fontSize: "12px",
+                    fontWeight: 600
                   }}
                 >
-                  <ThumbsUp size={14} /> Accurate & High Value
+                  <ThumbsUp size={14} />
+                  Accurate Diagnosis
                 </button>
 
                 <button
@@ -252,20 +259,21 @@ export function ProjectFeedbackPage({ activeProject }) {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    gap: "6px",
-                    fontWeight: 600,
-                    fontSize: "12px"
+                    gap: "8px",
+                    fontSize: "12px",
+                    fontWeight: 600
                   }}
                 >
-                  <ThumbsDown size={14} /> Needs Fine-Tuning
+                  <ThumbsDown size={14} />
+                  Needs Refinement
                 </button>
               </div>
             </div>
 
-            {/* Tags */}
+            {/* Tag Selection */}
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
               <label style={{ fontSize: "11.5px", color: "var(--ink-secondary)", fontWeight: 600 }}>
-                Evaluation Categories:
+                Evaluation Aspects:
               </label>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
                 {availableTags.map((tag) => {
@@ -276,11 +284,11 @@ export function ProjectFeedbackPage({ activeProject }) {
                       type="button"
                       onClick={() => toggleTag(tag)}
                       style={{
-                        padding: "3px 8px",
+                        padding: "4px 8px",
                         fontSize: "11px",
                         borderRadius: "4px",
-                        border: isSelected ? "1px solid var(--prism-magenta)" : "1px solid var(--border-subtle)",
-                        background: isSelected ? "rgba(225, 29, 72, 0.15)" : "var(--bg-input)",
+                        border: isSelected ? "1px solid var(--prism-pink)" : "1px solid var(--border-subtle)",
+                        background: isSelected ? "rgba(236, 72, 153, 0.15)" : "var(--bg-elevated)",
                         color: isSelected ? "var(--prism-pink)" : "var(--ink-secondary)",
                         cursor: "pointer"
                       }}
@@ -292,10 +300,10 @@ export function ProjectFeedbackPage({ activeProject }) {
               </div>
             </div>
 
-            {/* Notes Textarea */}
+            {/* Comment Area */}
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
               <label style={{ fontSize: "11.5px", color: "var(--ink-secondary)", fontWeight: 600 }}>
-                SRE Detailed Notes:
+                Calibration Notes & Findings:
               </label>
               <textarea
                 rows={3}
@@ -353,61 +361,72 @@ export function ProjectFeedbackPage({ activeProject }) {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {feedbacks.map((fb) => (
-              <div
-                key={fb.id}
-                style={{
-                  padding: "14px",
-                  borderRadius: "8px",
-                  background: "var(--bg-elevated)",
-                  border: "1px solid var(--border-subtle)",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "8px"
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span
-                      style={{
-                        padding: "3px 6px",
-                        borderRadius: "4px",
-                        background: fb.rating === "UP" ? "rgba(16, 185, 129, 0.15)" : "rgba(225, 29, 72, 0.15)",
-                        color: fb.rating === "UP" ? "var(--accent-teal)" : "var(--accent-rose)",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "4px",
-                        fontSize: "11px",
-                        fontWeight: 700
-                      }}
-                    >
-                      {fb.rating === "UP" ? <ThumbsUp size={11} /> : <ThumbsDown size={11} />}
-                      {fb.rating === "UP" ? "Accurate" : "Refinement"}
-                    </span>
-                    <strong style={{ fontFamily: "'JetBrains Mono', monospace", color: "var(--prism-pink)", fontSize: "12.5px" }}>
-                      {fb.ticketKey}
-                    </strong>
-                  </div>
-
-                  <span style={{ fontSize: "11px", color: "var(--ink-muted)" }}>{fb.time}</span>
-                </div>
-
-                <p style={{ fontSize: "12px", color: "var(--ink-secondary)", lineHeight: 1.5 }}>
-                  "{fb.comment}"
-                </p>
-
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid var(--border-subtle)", paddingTop: "8px", fontSize: "11px" }}>
-                  <span style={{ color: "var(--ink-tertiary)" }}>By: <strong style={{ color: "var(--ink-primary)" }}>{fb.author}</strong></span>
-                  <div style={{ display: "flex", gap: "4px" }}>
-                    {fb.tags.map((t, idx) => (
-                      <span key={idx} style={{ fontSize: "10px", padding: "1px 6px", borderRadius: "3px", background: "var(--bg-input)", color: "var(--accent-teal)" }}>
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+            {isLoading ? (
+              <div style={{ padding: "40px", textAlign: "center", color: "var(--ink-tertiary)" }}>
+                <RotateCw className="spin" size={20} style={{ margin: "0 auto 8px auto" }} />
+                <span>Loading feedback stream...</span>
               </div>
-            ))}
+            ) : feedbacks.length === 0 ? (
+              <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--ink-tertiary)", fontSize: "12.5px" }}>
+                No calibration feedback recorded yet for this project. Submit the first evaluation to calibrate model instructions.
+              </div>
+            ) : (
+              feedbacks.map((fb) => (
+                <div
+                  key={fb.id}
+                  style={{
+                    padding: "14px",
+                    borderRadius: "8px",
+                    background: "var(--bg-elevated)",
+                    border: "1px solid var(--border-subtle)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px"
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span
+                        style={{
+                          padding: "3px 6px",
+                          borderRadius: "4px",
+                          background: fb.rating === "UP" ? "rgba(16, 185, 129, 0.15)" : "rgba(225, 29, 72, 0.15)",
+                          color: fb.rating === "UP" ? "var(--accent-teal)" : "var(--accent-rose)",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          fontSize: "11px",
+                          fontWeight: 700
+                        }}
+                      >
+                        {fb.rating === "UP" ? <ThumbsUp size={11} /> : <ThumbsDown size={11} />}
+                        {fb.rating === "UP" ? "Accurate" : "Refinement"}
+                      </span>
+                      <strong style={{ fontFamily: "'JetBrains Mono', monospace", color: "var(--prism-pink)", fontSize: "12.5px" }}>
+                        {fb.ticketKey}
+                      </strong>
+                    </div>
+
+                    <span style={{ fontSize: "11px", color: "var(--ink-muted)" }}>{fb.time}</span>
+                  </div>
+
+                  <p style={{ fontSize: "12px", color: "var(--ink-secondary)", lineHeight: 1.5 }}>
+                    "{fb.comment}"
+                  </p>
+
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid var(--border-subtle)", paddingTop: "8px", fontSize: "11px" }}>
+                    <span style={{ color: "var(--ink-tertiary)" }}>By: <strong style={{ color: "var(--ink-primary)" }}>{fb.author}</strong></span>
+                    <div style={{ display: "flex", gap: "4px" }}>
+                      {fb.tags.map((t, idx) => (
+                        <span key={idx} style={{ fontSize: "10px", padding: "1px 6px", borderRadius: "3px", background: "var(--bg-input)", color: "var(--accent-teal)" }}>
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

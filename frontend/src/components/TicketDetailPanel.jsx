@@ -67,7 +67,7 @@ export function TicketDetailPanel({ ticket, onClose, onTicketUpdated }) {
       source: "Sentrix Autonomous Collector",
       type: "DIAGNOSTIC",
       sha256: "91a82910fa892019482910fa82910",
-      time: ticket.time || "5m ago",
+      time: ticket.time || ticket.created_at || null,
       summary: "Error pattern correlated with high confidence.",
       payload: ticket.triageSummary || "RCA identified from error log stream."
     }
@@ -185,7 +185,7 @@ export function TicketDetailPanel({ ticket, onClose, onTicketUpdated }) {
         role: "SRE Investigator",
         team: commentTeam,
         avatar: commentAuthor.slice(0, 2).toUpperCase(),
-        time: "Just now",
+        time: new Date().toLocaleTimeString(),
         text: newCommentText.trim()
       };
       setComments((prev) => [localComment, ...prev]);
@@ -249,6 +249,11 @@ export function TicketDetailPanel({ ticket, onClose, onTicketUpdated }) {
                 {ticket.key}
               </span>
               <span className={`badge ${priorityColor}`}>{ticket.priority || "P1"}</span>
+              {ticket.slaTarget && (
+                <span className="badge badge-magenta" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                  <Clock size={11} /> SLA Target: {ticket.slaTarget}
+                </span>
+              )}
               {ticket.confidence && (
                 <span className="badge badge-amber">
                   <Zap size={12} /> {ticket.confidence}% Confidence
@@ -728,7 +733,7 @@ export function TicketDetailPanel({ ticket, onClose, onTicketUpdated }) {
                   rows={5}
                   style={{
                     width: "100%",
-                    background: "rgba(0, 0, 0, 0.35)",
+                    background: "var(--bg-input)",
                     color: "var(--ink-primary)",
                     border: "1px solid var(--border-subtle)",
                     borderRadius: "8px",
@@ -845,7 +850,8 @@ export function TicketDetailPanel({ ticket, onClose, onTicketUpdated }) {
                     <pre
                       style={{
                         padding: "10px",
-                        background: "rgba(0, 0, 0, 0.3)",
+                        background: "var(--bg-app)",
+                        border: "1px solid var(--border-subtle)",
                         borderRadius: "6px",
                         fontSize: "12px",
                         color: "var(--ink-secondary)",
@@ -941,7 +947,7 @@ export function TicketDetailPanel({ ticket, onClose, onTicketUpdated }) {
                   rows={3}
                   style={{
                     width: "100%",
-                    background: "rgba(0, 0, 0, 0.25)",
+                    background: "var(--bg-input)",
                     border: "1px solid var(--border-subtle)",
                     borderRadius: "8px",
                     padding: "10px 12px",
@@ -1122,7 +1128,7 @@ export function TicketDetailPanel({ ticket, onClose, onTicketUpdated }) {
                           <pre
                             style={{
                               padding: "10px 12px",
-                              background: "rgba(0, 0, 0, 0.4)",
+                              background: "var(--bg-app)",
                               borderRadius: "6px",
                               border: "1px solid var(--border-subtle)",
                               color: "var(--ink-secondary)",
@@ -1155,8 +1161,8 @@ export function TicketDetailPanel({ ticket, onClose, onTicketUpdated }) {
 
               <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "4px" }}>
                 {(ticket.teamActivity || [
-                  { time: "Just now", user: "Sentrix Agent", action: "Active investigation connected" },
-                  { time: ticket.time || "10m ago", user: ticket.reporter || "Monitoring", action: "Incident reported" }
+                  { time: new Date().toLocaleTimeString(), user: "Sentrix Agent", action: "Active investigation connected" },
+                  { time: ticket.time || ticket.created_at || null, user: ticket.reporter || "Monitoring", action: "Incident reported" }
                 ]).map((act, idx) => (
                   <div
                     key={idx}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   BookOpen,
   Wrench,
@@ -29,7 +30,11 @@ import {
   Zap,
   ArrowRight,
   Eye,
-  Shield
+  Shield,
+  BarChart3,
+  Paperclip,
+  ClipboardList,
+  Container
 } from "lucide-react";
 
 export function DocsModal({ isOpen, onClose }) {
@@ -85,7 +90,7 @@ export function DocsModal({ isOpen, onClose }) {
       }
       setSchemaValidationResult({
         valid: true,
-        message: `Tool '${parsed.name}' is valid for Sentrix Tool Broker & ADK 2.8 binding. (Read-only: ${parsed.is_read_only !== false})`
+        message: `Tool '${parsed.name}' is valid for Sentrix Tool Broker & Google ADK binding. (Read-only: ${parsed.is_read_only !== false})`
       });
     } catch (err) {
       setSchemaValidationResult({
@@ -95,24 +100,30 @@ export function DocsModal({ isOpen, onClose }) {
     }
   };
 
-  return (
-    <div style={{
-      position: "fixed",
-      inset: 0,
-      background: "rgba(0, 0, 0, 0.78)",
-      backdropFilter: "blur(8px)",
-      zIndex: 1000,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "20px"
-    }}>
+  return createPortal(
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0, 0, 0, 0.75)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+        zIndex: 100000,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "20px"
+      }}
+    >
       <div
         className="prism-card message-animate-in"
+        onClick={(e) => e.stopPropagation()}
         style={{
           width: "92vw",
           maxWidth: "1320px",
           height: "88vh",
+          maxHeight: "88vh",
           background: "var(--bg-card)",
           border: "1px solid var(--border-card)",
           borderRadius: "16px",
@@ -154,7 +165,7 @@ export function DocsModal({ isOpen, onClose }) {
                 <h3 style={{ fontSize: "16px", fontWeight: "700", color: "var(--ink-primary)", margin: 0 }}>
                   Sentrix Platform Documentation & Knowledge Base
                 </h3>
-                <span className="mono badge badge-magenta" style={{ fontSize: "9px" }}>ADK 2.8</span>
+                <span className="mono badge badge-magenta" style={{ fontSize: "9px" }}>Google ADK</span>
                 <span className="mono badge badge-teal" style={{ fontSize: "9px" }}>Gemini 2.5 Pro</span>
                 <span className="mono badge badge-violet" style={{ fontSize: "9px" }}>Zero-Trust</span>
               </div>
@@ -175,7 +186,7 @@ export function DocsModal({ isOpen, onClose }) {
                 onChange={(e) => setSearchFilter(e.target.value)}
                 style={{
                   width: "100%",
-                  padding: "6px 10px 6px 28px",
+                  padding: "6px 28px 6px 28px",
                   background: "var(--bg-input)",
                   border: "1px solid var(--border-subtle)",
                   borderRadius: "6px",
@@ -183,6 +194,26 @@ export function DocsModal({ isOpen, onClose }) {
                   fontSize: "11.5px"
                 }}
               />
+              {searchFilter && (
+                <button
+                  onClick={() => setSearchFilter("")}
+                  style={{
+                    position: "absolute",
+                    right: "6px",
+                    top: "6px",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "var(--ink-tertiary)",
+                    padding: "2px",
+                    display: "flex",
+                    alignItems: "center"
+                  }}
+                  title="Clear search"
+                >
+                  <X size={12} />
+                </button>
+              )}
             </div>
 
             <button
@@ -203,17 +234,17 @@ export function DocsModal({ isOpen, onClose }) {
           gap: "8px",
           padding: "10px 24px",
           borderBottom: "1px solid var(--border-subtle)",
-          background: "rgba(0, 0, 0, 0.2)",
+          background: "var(--bg-app)",
           flexShrink: 0,
           overflowX: "auto"
         }}>
           {[
-            { id: "how-to-use", label: "How to Use the App", icon: Compass, badge: "User Guide" },
-            { id: "how-it-works", label: "How It Works", icon: Activity, badge: "Architecture" },
-            { id: "how-to-request", label: "How to Request & Prompt", icon: MessageSquare, badge: "Inquiry Guide" },
-            { id: "tools-connectors", label: "Adding Tools & Connectors", icon: Wrench, badge: "Extensibility" },
-            { id: "mcp", label: "Model Context Protocol (MCP)", icon: Network, badge: "Standards" },
-            { id: "tester", label: "Live Schema Tester", icon: Code2, badge: "Interactive" }
+            { id: "how-to-use", label: "How to Use", icon: Compass, badge: "Tour" },
+            { id: "how-it-works", label: "Architecture", icon: Activity, badge: "Engine" },
+            { id: "how-to-request", label: "Prompt Recipes", icon: MessageSquare, badge: "Prompts" },
+            { id: "tools-connectors", label: "Custom Tools", icon: Wrench, badge: "Connectors" },
+            { id: "mcp", label: "MCP Protocol", icon: Network, badge: "Stdio/SSE" },
+            { id: "tester", label: "Schema Tester", icon: Code2, badge: "Interactive" }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -222,8 +253,8 @@ export function DocsModal({ isOpen, onClose }) {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "8px",
-                padding: "6px 14px",
+                gap: "7px",
+                padding: "6px 12px",
                 borderRadius: "8px",
                 background: activeTab === tab.id ? "rgba(236, 72, 153, 0.14)" : "rgba(255, 255, 255, 0.03)",
                 border: activeTab === tab.id ? "1px solid var(--prism-pink)" : "1px solid var(--border-subtle)",
@@ -268,49 +299,28 @@ export function DocsModal({ isOpen, onClose }) {
                 </p>
 
                 <div style={{ marginTop: "16px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-                  {/* Step 1 */}
-                  <div className="prism-card" style={{ padding: "16px", background: "rgba(255, 255, 255, 0.02)" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span className="mono badge badge-magenta" style={{ fontSize: "10px" }}>1</span>
-                      <strong style={{ fontSize: "13px", color: "var(--ink-primary)" }}>Monitor Live Triage Board</strong>
-                    </div>
-                    <p style={{ fontSize: "12px", color: "var(--ink-secondary)", marginTop: "8px", lineHeight: 1.5 }}>
-                      Navigate to the <strong>Live Triage Board</strong> (priority #1 on the sidebar). Filter tickets by severity (P1 Critical, P2 Major) or status (Investigating, Triage Ready, Action Staged, Resolved). Click any incident ticket card to open the complete Evidence Locker & Investigation Details.
-                    </p>
-                  </div>
-
-                  {/* Step 2 */}
-                  <div className="prism-card" style={{ padding: "16px", background: "rgba(255, 255, 255, 0.02)" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span className="mono badge badge-teal" style={{ fontSize: "10px" }}>2</span>
-                      <strong style={{ fontSize: "13px", color: "var(--ink-primary)" }}>Autonomous Investigation Stream</strong>
-                    </div>
-                    <p style={{ fontSize: "12px", color: "var(--ink-secondary)", marginTop: "8px", lineHeight: 1.5 }}>
-                      Open the <strong>Investigation Stream</strong> to converse with the autonomous SRE agent. View the agent's real-time diagnostic progress, peek into telemetry packets (PostgreSQL locks, Datadog spikes, K8s restarts), and ask for telemetry charts, database queries, and RCA summaries.
-                    </p>
-                  </div>
-
-                  {/* Step 3 */}
-                  <div className="prism-card" style={{ padding: "16px", background: "rgba(255, 255, 255, 0.02)" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span className="mono badge badge-violet" style={{ fontSize: "10px" }}>3</span>
-                      <strong style={{ fontSize: "13px", color: "var(--ink-primary)" }}>Review & Authorize Action Proposals</strong>
-                    </div>
-                    <p style={{ fontSize: "12px", color: "var(--ink-secondary)", marginTop: "8px", lineHeight: 1.5 }}>
-                      The agent never mutates infrastructure without permission. When a fix is identified (e.g. HikariCP pool expansion, pod rollout restart, Jira comment), the agent stages a <strong>Cryptographic Action Proposal</strong>. Verify the diff and click <em>Authorize & Execute</em> under your delegated authority.
-                    </p>
-                  </div>
-
-                  {/* Step 4 */}
-                  <div className="prism-card" style={{ padding: "16px", background: "rgba(255, 255, 255, 0.02)" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span className="mono badge badge-amber" style={{ fontSize: "10px" }}>4</span>
-                      <strong style={{ fontSize: "13px", color: "var(--ink-primary)" }}>Project Setup Studio & Customization</strong>
-                    </div>
-                    <p style={{ fontSize: "12px", color: "var(--ink-secondary)", marginTop: "8px", lineHeight: 1.5 }}>
-                      Access <strong>Setup & Studio</strong> to configure Jira queue JQL polling (e.g. 30s intervals), enter enterprise datasource credentials, customize the system prompt, adjust temperature, and upload runbooks into the Open Knowledge Fabric (OKF v2.0).
-                    </p>
-                  </div>
+                  {[
+                    { step: "1", title: "Monitor Live Triage Board", desc: "Navigate to the Live Triage Board (priority #1 on the sidebar). Filter tickets by severity (P1 Critical, P2 Major) or status (Investigating, Triage Ready, Action Staged, Resolved). Click any incident ticket card to open the complete Evidence Locker & Investigation Details.", badge: "badge-magenta" },
+                    { step: "2", title: "Autonomous Investigation Stream", desc: "Open the Investigation Stream to converse with the autonomous SRE agent. View the agent's real-time diagnostic progress, peek into telemetry packets (PostgreSQL locks, Datadog spikes, K8s restarts), and ask for telemetry charts, database queries, and RCA summaries.", badge: "badge-teal" },
+                    { step: "3", title: "Review & Authorize Action Proposals", desc: "The agent never mutates infrastructure without permission. When a fix is identified (e.g. HikariCP pool expansion, pod rollout restart, Jira comment), the agent stages a Cryptographic Action Proposal. Verify the diff and click Authorize & Execute under your delegated authority.", badge: "badge-violet" },
+                    { step: "4", title: "Project Setup Studio & Customization", desc: "Access Setup & Studio to configure Jira queue JQL polling (e.g. 30s intervals), enter enterprise datasource credentials, customize the system prompt, adjust temperature, and upload runbooks into the Open Knowledge Fabric (OKF v2.0).", badge: "badge-amber" }
+                  ]
+                    .filter((item) => {
+                      if (!searchFilter.trim()) return true;
+                      const q = searchFilter.toLowerCase();
+                      return item.title.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q);
+                    })
+                    .map((item) => (
+                      <div key={item.step} className="prism-card" style={{ padding: "16px", background: "rgba(255, 255, 255, 0.02)" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <span className={`mono badge ${item.badge}`} style={{ fontSize: "10px" }}>{item.step}</span>
+                          <strong style={{ fontSize: "13px", color: "var(--ink-primary)" }}>{item.title}</strong>
+                        </div>
+                        <p style={{ fontSize: "12px", color: "var(--ink-secondary)", marginTop: "8px", lineHeight: 1.5 }}>
+                          {item.desc}
+                        </p>
+                      </div>
+                    ))}
                 </div>
 
                 {/* SRE Metrics & Reports */}
@@ -340,37 +350,29 @@ export function DocsModal({ isOpen, onClose }) {
                   </h4>
                 </div>
                 <p style={{ fontSize: "12.5px", color: "var(--ink-secondary)", marginTop: "6px", lineHeight: 1.6 }}>
-                  Sentrix operates on a dual-loop autonomous architecture powered by <strong>Google ADK 2.8</strong> and <strong>Gemini 2.5 Pro</strong>. It continuously ingests incident alerts, interrogates infrastructure via read-only tools, and synthesizes verifiable root causes.
+                  Sentrix operates on a dual-loop autonomous architecture powered by <strong>Google ADK</strong> and <strong>Gemini 2.5 Pro</strong>. It continuously ingests incident alerts, interrogates infrastructure via read-only tools, and synthesizes verifiable root causes.
                 </p>
 
                 <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
-                  <div className="prism-card" style={{ padding: "14px", borderLeft: "3px solid var(--prism-pink)" }}>
-                    <h5 style={{ fontSize: "13px", color: "var(--prism-pink)", margin: 0 }}>Loop 1: Real-time Ingestion & Auto-Triage Daemon</h5>
-                    <p style={{ fontSize: "12px", color: "var(--ink-secondary)", marginTop: "4px", lineHeight: 1.5 }}>
-                      A background FastAPI daemon polls configured Jira queues and ServiceNow tables every 30 seconds using dynamic JQL. When an incident is ingested, the classifier isolates affected microservices, calculates priority, and correlates the incident signature with historical precedents in the Open Knowledge Fabric (OKF v2.0).
-                    </p>
-                  </div>
-
-                  <div className="prism-card" style={{ padding: "14px", borderLeft: "3px solid var(--accent-teal)" }}>
-                    <h5 style={{ fontSize: "13px", color: "var(--accent-teal)", margin: 0 }}>Loop 2: Zero-Trust Tool Broker & Parallel Telemetry Dispatch</h5>
-                    <p style={{ fontSize: "12px", color: "var(--ink-secondary)", marginTop: "4px", lineHeight: 1.5 }}>
-                      The agent issues parallel telemetry queries through the Tool Broker: querying PostgreSQL for active row-level locks, Datadog APM for latency and error spikes, Splunk for exception traces, and Kubernetes API for pod restart crashloops. All diagnostics are strictly read-only.
-                    </p>
-                  </div>
-
-                  <div className="prism-card" style={{ padding: "14px", borderLeft: "3px solid var(--accent-violet)" }}>
-                    <h5 style={{ fontSize: "13px", color: "var(--accent-violet)", margin: 0 }}>Loop 3: OKF v2.0 Knowledge Correlation & Runbook Matching</h5>
-                    <p style={{ fontSize: "12px", color: "var(--ink-secondary)", marginTop: "4px", lineHeight: 1.5 }}>
-                      The agent cross-references active symptoms against 148+ historical incident precedents in the Open Knowledge Fabric. It scores runbook matches (e.g. 96.4% confidence score on HikariCP pool exhaustion) to recommend battle-tested fixes.
-                    </p>
-                  </div>
-
-                  <div className="prism-card" style={{ padding: "14px", borderLeft: "3px solid var(--accent-amber)" }}>
-                    <h5 style={{ fontSize: "13px", color: "var(--accent-amber)", margin: 0 }}>Loop 4: Cryptographic Action Proposal & Human Authorization</h5>
-                    <p style={{ fontSize: "12px", color: "var(--ink-secondary)", marginTop: "4px", lineHeight: 1.5 }}>
-                      Mutating actions (such as restarting Kubernetes deployment, scaling database connection limits, or posting comments to Jira) are cryptographically sealed with HMAC-SHA256 tokens. The action cannot execute until a domain engineer approves it under delegated authority.
-                    </p>
-                  </div>
+                  {[
+                    { loop: "Loop 1", title: "Real-time Ingestion & Auto-Triage Daemon", desc: "A background FastAPI daemon polls configured Jira queues and ServiceNow tables every 30 seconds using dynamic JQL. When an incident is ingested, the classifier isolates affected microservices, calculates priority, and correlates the incident signature with historical precedents in the Open Knowledge Fabric (OKF v2.0).", color: "var(--prism-pink)" },
+                    { loop: "Loop 2", title: "Zero-Trust Tool Broker & Parallel Telemetry Dispatch", desc: "The agent issues parallel telemetry queries through the Tool Broker: querying PostgreSQL for active row-level locks, Datadog APM for latency and error spikes, Splunk for exception traces, and Kubernetes API for pod restart crashloops. All diagnostics are strictly read-only.", color: "var(--accent-teal)" },
+                    { loop: "Loop 3", title: "OKF v2.0 Knowledge Correlation & Runbook Matching", desc: "The agent cross-references active symptoms against 148+ historical incident precedents in the Open Knowledge Fabric. It scores runbook matches (e.g. 96.4% confidence score on HikariCP pool exhaustion) to recommend battle-tested fixes.", color: "var(--accent-violet)" },
+                    { loop: "Loop 4", title: "Cryptographic Action Proposal & Human Authorization", desc: "Mutating actions (such as restarting Kubernetes deployment, scaling database connection limits, or posting comments to Jira) are cryptographically sealed with HMAC-SHA256 tokens. The action cannot execute until a domain engineer approves it under delegated authority.", color: "var(--accent-amber)" }
+                  ]
+                    .filter((item) => {
+                      if (!searchFilter.trim()) return true;
+                      const q = searchFilter.toLowerCase();
+                      return item.title.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q) || item.loop.toLowerCase().includes(q);
+                    })
+                    .map((item) => (
+                      <div key={item.loop} className="prism-card" style={{ padding: "14px", borderLeft: `3px solid ${item.color}` }}>
+                        <h5 style={{ fontSize: "13px", color: item.color, margin: 0 }}>{item.loop}: {item.title}</h5>
+                        <p style={{ fontSize: "12px", color: "var(--ink-secondary)", marginTop: "4px", lineHeight: 1.5 }}>
+                          {item.desc}
+                        </p>
+                      </div>
+                    ))}
                 </div>
               </div>
             </div>
@@ -393,101 +395,80 @@ export function DocsModal({ isOpen, onClose }) {
                 </p>
 
                 <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
-                  {/* Recipe 1 */}
-                  <div className="prism-card" style={{ padding: "14px", background: "rgba(255, 255, 255, 0.02)" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: "12.5px", fontWeight: "700", color: "var(--prism-pink)" }}>
-                        📊 Requesting Telemetry Anomaly & Error Graphs
-                      </span>
-                      <button
-                        onClick={() => handleCopy("Show telemetry anomaly graph with p99 latency spikes and error rate volume", "rec1")}
-                        className="btn-ghost"
-                        style={{ fontSize: "11px", padding: "3px 8px" }}
-                      >
-                        {copiedSection === "rec1" ? <Check size={12} color="var(--accent-teal)" /> : <Copy size={12} />}
-                      </button>
-                    </div>
-                    <code className="mono" style={{ display: "block", marginTop: "6px", fontSize: "12px", color: "var(--ink-primary)", background: "rgba(0, 0, 0, 0.3)", padding: "8px 12px", borderRadius: "6px" }}>
-                      "Show telemetry anomaly graph with p99 latency spikes and error rate volume"
-                    </code>
-                    <p style={{ fontSize: "11.5px", color: "var(--ink-secondary)", marginTop: "6px", margin: 0 }}>
-                      Triggers Datadog APM connector and renders an interactive SVG bar chart comparing p99 response times against error spike volumes.
-                    </p>
-                  </div>
-
-                  {/* Recipe 2 */}
-                  <div className="prism-card" style={{ padding: "14px", background: "rgba(255, 255, 255, 0.02)" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: "12.5px", fontWeight: "700", color: "var(--accent-teal)" }}>
-                        🐘 Querying Database Deadlocks & Pool Saturation
-                      </span>
-                      <button
-                        onClick={() => handleCopy("Query database for active locks, blocked transactions, and HikariCP connection pool health", "rec2")}
-                        className="btn-ghost"
-                        style={{ fontSize: "11px", padding: "3px 8px" }}
-                      >
-                        {copiedSection === "rec2" ? <Check size={12} color="var(--accent-teal)" /> : <Copy size={12} />}
-                      </button>
-                    </div>
-                    <code className="mono" style={{ display: "block", marginTop: "6px", fontSize: "12px", color: "var(--ink-primary)", background: "rgba(0, 0, 0, 0.3)", padding: "8px 12px", borderRadius: "6px" }}>
-                      "Query database for active locks, blocked transactions, and HikariCP connection pool health"
-                    </code>
-                    <p style={{ fontSize: "11.5px", color: "var(--ink-secondary)", marginTop: "6px", margin: 0 }}>
-                      Queries <code>pg_stat_activity</code> and renders an interactive SQL data table displaying PID, query text, lock status, and duration.
-                    </p>
-                  </div>
-
-                  {/* Recipe 3 */}
-                  <div className="prism-card" style={{ padding: "14px", background: "rgba(255, 255, 255, 0.02)" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: "12.5px", fontWeight: "700", color: "var(--accent-violet)" }}>
-                        ☸️ Inspecting Kubernetes Pod Restarts & CrashLogs
-                      </span>
-                      <button
-                        onClick={() => handleCopy("Check Kubernetes worker pod health, restart counts, and show recent container crash logs", "rec3")}
-                        className="btn-ghost"
-                        style={{ fontSize: "11px", padding: "3px 8px" }}
-                      >
-                        {copiedSection === "rec3" ? <Check size={12} color="var(--accent-teal)" /> : <Copy size={12} />}
-                      </button>
-                    </div>
-                    <code className="mono" style={{ display: "block", marginTop: "6px", fontSize: "12px", color: "var(--ink-primary)", background: "rgba(0, 0, 0, 0.3)", padding: "8px 12px", borderRadius: "6px" }}>
-                      "Check Kubernetes worker pod health, restart counts, and show recent container crash logs"
-                    </code>
-                    <p style={{ fontSize: "11.5px", color: "var(--ink-secondary)", marginTop: "6px", margin: 0 }}>
-                      Executes Kubernetes API read-only queries to surface pod statuses (CrashLoopBackOff, OOMKilled) and isolates stack traces.
-                    </p>
-                  </div>
-
-                  {/* Recipe 4 */}
-                  <div className="prism-card" style={{ padding: "14px", background: "rgba(255, 255, 255, 0.02)" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: "12.5px", fontWeight: "700", color: "var(--accent-amber)" }}>
-                        📋 Generating Executive Root Cause Analysis (RCA) Reports
-                      </span>
-                      <button
-                        onClick={() => handleCopy("Synthesize root cause analysis with timeline of events and stage remediation proposals", "rec4")}
-                        className="btn-ghost"
-                        style={{ fontSize: "11px", padding: "3px 8px" }}
-                      >
-                        {copiedSection === "rec4" ? <Check size={12} color="var(--accent-teal)" /> : <Copy size={12} />}
-                      </button>
-                    </div>
-                    <code className="mono" style={{ display: "block", marginTop: "6px", fontSize: "12px", color: "var(--ink-primary)", background: "rgba(0, 0, 0, 0.3)", padding: "8px 12px", borderRadius: "6px" }}>
-                      "Synthesize root cause analysis with timeline of events and stage remediation proposals"
-                    </code>
-                    <p style={{ fontSize: "11.5px", color: "var(--ink-secondary)", marginTop: "6px", margin: 0 }}>
-                      Renders a comprehensive Triage Report card with verified root cause, chronological event timeline, and one-click action proposals.
-                    </p>
-                  </div>
+                  {[
+                    { id: "rec1", icon: BarChart3, title: "Requesting Telemetry Anomaly & Error Graphs", prompt: "Show telemetry anomaly graph with p99 latency spikes and error rate volume", desc: "Triggers Datadog APM connector and renders an interactive SVG bar chart comparing p99 response times against error spike volumes.", color: "var(--prism-pink)" },
+                    { id: "rec2", icon: Database, title: "Querying Database Deadlocks & Pool Saturation", prompt: "Query database for active locks, blocked transactions, and HikariCP connection pool health", desc: "Queries pg_stat_activity and renders an interactive SQL data table displaying PID, query text, lock status, and duration.", color: "var(--accent-teal)" },
+                    { id: "rec3", icon: Container, title: "Inspecting Kubernetes Pod Restarts & CrashLogs", prompt: "Check Kubernetes worker pod health, restart counts, and show recent container crash logs", desc: "Executes Kubernetes API read-only queries to surface pod statuses (CrashLoopBackOff, OOMKilled) and isolates stack traces.", color: "var(--accent-violet)" },
+                    { id: "rec4", icon: ClipboardList, title: "Generating Executive Root Cause Analysis (RCA) Reports", prompt: "Synthesize root cause analysis with timeline of events and stage remediation proposals", desc: "Renders a comprehensive Triage Report card with verified root cause, chronological event timeline, and one-click action proposals.", color: "var(--accent-amber)" }
+                  ]
+                    .filter((item) => {
+                      if (!searchFilter.trim()) return true;
+                      const q = searchFilter.toLowerCase();
+                      return item.title.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q) || item.prompt.toLowerCase().includes(q);
+                    })
+                    .map((item) => {
+                      const IconComp = item.icon;
+                      return (
+                        <div key={item.id} className="prism-card" style={{ padding: "14px", background: "rgba(255, 255, 255, 0.02)" }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                            <span style={{ fontSize: "12.5px", fontWeight: "700", color: item.color, display: "flex", alignItems: "center", gap: "8px" }}>
+                              <div style={{
+                                width: "24px",
+                                height: "24px",
+                                borderRadius: "6px",
+                                background: "rgba(255, 255, 255, 0.05)",
+                                border: "1px solid var(--border-subtle)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: item.color,
+                                flexShrink: 0
+                              }}>
+                                <IconComp size={13} />
+                              </div>
+                              {item.title}
+                            </span>
+                            <button
+                              onClick={() => handleCopy(item.prompt, item.id)}
+                              className="btn-ghost"
+                              style={{ fontSize: "11px", padding: "3px 8px" }}
+                            >
+                              {copiedSection === item.id ? <Check size={12} color="var(--accent-teal)" /> : <Copy size={12} />}
+                            </button>
+                          </div>
+                          <code className="mono" style={{ display: "block", marginTop: "6px", fontSize: "12px", color: "var(--ink-primary)", background: "var(--bg-app)", border: "1px solid var(--border-subtle)", padding: "8px 12px", borderRadius: "6px" }}>
+                            "{item.prompt}"
+                          </code>
+                          <p style={{ fontSize: "11.5px", color: "var(--ink-secondary)", marginTop: "6px", margin: 0 }}>
+                            {item.desc}
+                          </p>
+                        </div>
+                      );
+                    })}
                 </div>
 
                 {/* Attaching Files & Diagnostics */}
-                <div style={{ marginTop: "14px", padding: "12px 14px", background: "rgba(236, 72, 153, 0.06)", border: "1px solid rgba(236, 72, 153, 0.2)", borderRadius: "8px" }}>
-                  <strong style={{ fontSize: "12px", color: "var(--prism-pink)" }}>📎 Attaching Diagnostics to Prompts:</strong>
-                  <span style={{ fontSize: "12px", color: "var(--ink-secondary)", marginLeft: "6px" }}>
-                    Click the <em>Attach</em> button next to the prompt input to upload SQL dumps (<code>pg_stat_activity_dump.sql</code>), APM metrics, or coredump JSONs. The agent analyzes attachments alongside live telemetry.
-                  </span>
+                <div style={{ marginTop: "14px", padding: "12px 14px", background: "rgba(236, 72, 153, 0.06)", border: "1px solid rgba(236, 72, 153, 0.2)", borderRadius: "8px", display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                  <div style={{
+                    width: "24px",
+                    height: "24px",
+                    borderRadius: "6px",
+                    background: "rgba(236, 72, 153, 0.15)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "var(--prism-pink)",
+                    flexShrink: 0,
+                    marginTop: "1px"
+                  }}>
+                    <Paperclip size={13} />
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: "12px", color: "var(--prism-pink)" }}>Attaching Diagnostics to Prompts:</strong>
+                    <span style={{ fontSize: "12px", color: "var(--ink-secondary)", marginLeft: "6px" }}>
+                      Click the <em>Attach</em> button next to the prompt input to upload SQL dumps (<code>pg_stat_activity_dump.sql</code>), APM metrics, or coredump JSONs. The agent analyzes attachments alongside live telemetry.
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -514,7 +495,7 @@ export function DocsModal({ isOpen, onClose }) {
                   <div style={{ position: "relative" }}>
                     <pre className="prism-card mono" style={{
                       padding: "14px",
-                      background: "rgba(0, 0, 0, 0.45)",
+                      background: "var(--bg-app)",
                       border: "1px solid var(--border-subtle)",
                       fontSize: "11.5px",
                       color: "var(--ink-primary)",
@@ -566,7 +547,7 @@ ToolBroker.register_tool(
                   <div style={{ position: "relative" }}>
                     <pre className="prism-card mono" style={{
                       padding: "14px",
-                      background: "rgba(0, 0, 0, 0.45)",
+                      background: "var(--bg-app)",
                       border: "1px solid var(--border-subtle)",
                       fontSize: "11.5px",
                       color: "var(--ink-primary)",
@@ -629,7 +610,7 @@ class SplunkLogConnector(BaseConnector):
                   <div style={{ position: "relative" }}>
                     <pre className="prism-card mono" style={{
                       padding: "14px",
-                      background: "rgba(0, 0, 0, 0.45)",
+                      background: "var(--bg-app)",
                       border: "1px solid var(--border-subtle)",
                       fontSize: "11.5px",
                       color: "var(--ink-primary)",
@@ -677,7 +658,7 @@ class SplunkLogConnector(BaseConnector):
                   Live Tool Schema Validator
                 </h4>
                 <p style={{ fontSize: "12.5px", color: "var(--ink-secondary)", marginTop: "4px" }}>
-                  Validate your custom tool or MCP tool schema against Sentrix ADK 2.8 runtime specifications right in this popup.
+                  Validate your custom tool or MCP tool schema against Sentrix ADK runtime specifications right in this popup.
                 </p>
 
                 <div style={{ marginTop: "14px", display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -751,6 +732,7 @@ class SplunkLogConnector(BaseConnector):
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

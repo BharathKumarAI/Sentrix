@@ -1,8 +1,9 @@
 """
-Production-Grade Autonomous Triaging Engine for PRISM.
-Powered by Google ADK (Agent Development Kit 2.8.0) and LiteLLM/Gemini.
-Conducts multi-tool investigations, correlates evidence, enforces governance,
-and synthesizes root causes with actionable remediation proposals.
+Enterprise Investigation Platform Accelerator Engine for PRISM.
+Metadata-driven execution:
+User Request -> Context Resolver -> Signal Extraction -> Skill Compilation ->
+Deterministic Scheduler -> Governed Capability Executor -> Evidence Bundles & Coverage ->
+Model Synthesis -> Approval-gated Write Actions.
 """
 import asyncio
 import json
@@ -11,27 +12,31 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, AsyncGenerator, Dict, List, Optional
 from sqlalchemy import select
-from backend.agent.parameter_resolver import ParameterResolver
-from backend.agent.tool_broker import ToolBroker
-from backend.connectors.base import ExecutionContext
+from backend.agent.execution_context import ContextResolver, ExecutionContextSnapshot
+from backend.agent.governed_executor import GovernedCapabilityExecutor
+from backend.agent.model_router import ModelRouter
+from backend.agent.request_classifier import RequestClassifier
+from backend.agent.scheduler import DeterministicScheduler
+from backend.agent.signals import SignalExtractor, SignalStore, SignalType
+from backend.agent.skills_engine import SkillsEngine
 from backend.database.connection import get_async_db
 from backend.database.models import (
     Conversation,
     OkfTriagedCase,
-    Project,
-    ProjectSetupInstruction,
     Run,
     RunEvent,
     RunMetric,
     RunSnapshot,
+    ModelInvocationLedgerRecord,
 )
 
-logger = logging.getLogger("prism.agent.triage")
+logger = logging.getLogger("sentrix.agent.triage_engine")
 
 
 class TriageEngine:
     """
-    Agentic investigation coordinator that executes multi-step incident triages.
+    Metadata-driven autonomous investigation coordinator.
+    Replaces hardcoded triage logic with signal-driven scheduling and governed capability execution.
     """
 
     def __init__(
@@ -40,24 +45,28 @@ class TriageEngine:
         environment: str,
         user_id: str,
         delegated_identity: str,
-        conversation_id: Optional[str] = None
+        conversation_id: Optional[str] = None,
+        run_id: Optional[str] = None,
+        event_sink=None,
     ):
+        self.event_sink = event_sink
         self.project_id = project_id
         self.environment = environment
         self.user_id = user_id
         self.delegated_identity = delegated_identity
         self.conversation_id = conversation_id or f"conv_{uuid.uuid4().hex[:12]}"
-        self.run_id = f"run_{uuid.uuid4().hex[:12]}"
+        self.run_id = run_id or f"run_{uuid.uuid4().hex[:12]}"
 
     async def execute_auto_triage(
         self,
         issue_title: str,
-        issue_description: str,
+        issue_description: Optional[str] = None,
         error_logs: Optional[str] = None,
-        jira_ticket_key: Optional[str] = None
+        jira_ticket_key: Optional[str] = None,
+        execution_mode: str = "rapid",
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
-        Runs the full autonomous triage lifecycle, streaming real-time canonical events.
+        Runs the full metadata-driven investigation lifecycle, streaming typed SSE events.
         """
         start_time = datetime.now(timezone.utc)
         seq_no = 1
@@ -70,26 +79,31 @@ class TriageEngine:
                 "seq_no": seq_no,
                 "type": event_type,
                 "occurred_at": datetime.now(timezone.utc).isoformat(),
-                "payload": payload
+                "payload": payload,
             }
             seq_no += 1
-            
+
             # Persist event to DB
-            async with get_async_db() as db:
-                re = RunEvent(
-                    id=evt["event_id"],
-                    run_id=self.run_id,
-                    seq_no=evt["seq_no"],
-                    event_type=event_type,
-                    payload_json=payload
-                )
-                re.row_hash = re.calculate_row_hash({"id": re.id, "type": event_type})
-                db.add(re)
+            try:
+                async with get_async_db() as db:
+                    re = RunEvent(
+                        id=evt["event_id"],
+                        run_id=self.run_id,
+                        seq_no=evt["seq_no"],
+                        event_type=event_type,
+                        payload_json=payload,
+                    )
+                    re.row_hash = re.calculate_row_hash({"id": re.id, "type": event_type})
+                    db.add(re)
+            except Exception as e:
+                logger.warning(f"Could not persist run event: {e}")
+
+            if self.event_sink:
+                await self.event_sink(evt)
             return evt
 
         # 1. Initialize Conversation & Run in Database
         async with get_async_db() as db:
-            # Ensure conversation exists
             conv_query = select(Conversation).where(Conversation.id == self.conversation_id)
             conv_res = await db.execute(conv_query)
             conv = conv_res.scalars().first()
@@ -101,7 +115,7 @@ class TriageEngine:
                     user_id=self.user_id,
                     title=issue_title[:250],
                     status="ACTIVE",
-                    summary=issue_description[:500] if issue_description else issue_title
+                    summary=issue_description[:500] if issue_description else issue_title,
                 )
                 conv.row_hash = conv.calculate_row_hash({"id": conv.id, "title": conv.title})
                 db.add(conv)
@@ -112,222 +126,322 @@ class TriageEngine:
                 conversation_id=self.conversation_id,
                 project_id=self.project_id,
                 environment=self.environment,
-                profile_id="deep_triage",
+                profile_id="metadata_accelerator",
                 status="RUNNING",
-                model_route="gemini-2.5-pro/litellm-router",
-                started_at=start_time
+                model_route="unresolved",
+                started_at=start_time,
             )
             run_record.row_hash = run_record.calculate_row_hash({"id": run_record.id, "status": "RUNNING"})
             db.add(run_record)
 
         yield await emit("RUN_STARTED", {
             "status": "RUNNING",
+            "run_id": self.run_id,
             "project_id": self.project_id,
             "environment": self.environment,
-            "issue_title": issue_title
+            "issue_title": issue_title,
         })
 
-        # 2. Resolve Parameters & Setup Instructions
-        effective_params = await ParameterResolver.resolve_effective_parameters(
+        # 2. 4-Dimensional Request Classification (Intent, Scope, Mode, Risk)
+        raw_combined_prompt = f"{issue_title} {issue_description or ''} {error_logs or ''} {jira_ticket_key or ''}".strip()
+        envelope = RequestClassifier.classify(
+            prompt=raw_combined_prompt,
             project_id=self.project_id,
-            user_id=self.user_id
-        )
-
-        async with get_async_db() as db:
-            setup_res = await db.execute(
-                select(ProjectSetupInstruction).where(ProjectSetupInstruction.project_id == self.project_id)
-            )
-            setup_inst = setup_res.scalars().first()
-            prompt_directives = setup_inst.prompt_directives if setup_inst else "Standard triage mode."
-            domain_context = setup_inst.domain_context if setup_inst else ""
-
-        # Initialize Tool Broker
-        exec_context = ExecutionContext(
+            environment=self.environment,
             user_id=self.user_id,
+            conversation_id=self.conversation_id,
+        )
+        yield await emit("REQUEST_CLASSIFIED", envelope.to_dict())
+
+        # 3. Context Resolver (Platform -> Project -> Profile -> Request)
+        context = await ContextResolver.resolve(
+            run_id=self.run_id,
             project_id=self.project_id,
-            project_environment=self.environment,
-            tool_environment="pending",
+            environment=self.environment,
+            user_id=self.user_id,
             delegated_identity=self.delegated_identity,
-            correlation_id=self.run_id,
-            effective_parameters=effective_params
+            execution_mode=execution_mode,
         )
-        broker = ToolBroker(context=exec_context, run_id=self.run_id)
 
-        # 3. Step A: Search OKF v2.0 for Historical Precedents
-        yield await emit("REASONING_STEP", {
-            "step": "OKF_KNOWLEDGE_SEARCH",
-            "message": "Consulting OKF v2.0 Knowledge Fabric for similar past resolved incidents..."
-        })
-
-        similar_cases = []
+        # Snapshot resolution
         async with get_async_db() as db:
-            okf_query = select(OkfTriagedCase).where(
-                OkfTriagedCase.project_id == self.project_id
-            ).limit(2)
-            okf_res = await db.execute(okf_query)
-            similar_cases = okf_res.scalars().all()
+            snap = RunSnapshot(
+                id=f"snap_{self.run_id[4:]}",
+                run_id=self.run_id,
+                resolved_skills_json=context.active_skills,
+                resolved_connectors_json=context.enabled_tools,
+                resolved_parameters_json=context.effective_parameters,
+                effective_env_mappings_json={"environment": self.environment},
+                sha256_hash=context.snapshot_hash,
+            )
+            snap.row_hash = snap.calculate_row_hash({"id": snap.id, "hash": snap.sha256_hash})
+            db.add(snap)
 
-        if similar_cases:
-            matched_case = similar_cases[0]
-            yield await emit("EVIDENCE_ADDED", {
-                "source": "okf_knowledge",
-                "summary": f"Historical Match found: {matched_case.incident_id} ('{matched_case.title}'). Verified root cause: {matched_case.root_cause[:80]}...",
-                "confidence": matched_case.confidence_score
-            })
+        yield await emit("CONTEXT_RESOLVED", {
+            "project_id": context.project_id,
+            "environment": context.environment,
+            "platform_name": "Sentrix Autonomous SRE",
+            "active_tools_count": len(context.enabled_tools),
+            "enabled_tools": context.enabled_tools,
+            "active_skills": context.active_skills,
+            "snapshot_hash": context.snapshot_hash,
+            "delegated_identity": self.delegated_identity,
+            "rbac_tier": None,
+        })
 
-        # 4. PARALLEL MULTI-TOOL INVESTIGATION (OpenWorker Parallel Execution Engine)
+        # 4. Canonical Signal Extraction
+        initial_signals = SignalExtractor.extract_from_text(raw_combined_prompt)
+
+        signal_store = SignalStore()
+        for s in initial_signals:
+            signal_store.add_signal(s)
+
+        # Ingest entities from envelope as canonical signals
+        for ent in envelope.entities:
+            if ent.type == "account.id":
+                signal_store.add(SignalType.ACCOUNT_ID, ent.value, source="envelope")
+            elif ent.type == "order.id":
+                signal_store.add(SignalType.ORDER_ID, ent.value, source="envelope")
+            elif ent.type == "ticket.key":
+                signal_store.add(SignalType.CASE_KEY, ent.value, source="envelope")
+
+        # Ensure environment signal is present
+        signal_store.add(SignalType.ENVIRONMENT_NAME, envelope.scope.environment, source="context")
+        if jira_ticket_key:
+            signal_store.add(SignalType.CASE_KEY, jira_ticket_key, source="argument")
+
+        yield await emit("SIGNALS_EXTRACTED", {
+            "signals": [s.to_dict() for s in signal_store.all_signals()],
+            "summary": signal_store.to_dict_summary(),
+        })
+
+        # 5. Layered Domain Skill Compilation (L0-L3 Composition)
+        skill = await SkillsEngine.select_best_skill(
+            intent_type=envelope.intent.type.value,
+            user_prompt=envelope.raw_prompt,
+            project_id=self.project_id,
+            user_id=self.user_id,
+        )
+        yield await emit("SKILL_SELECTED", {
+            "skill": skill.name,
+            "skill_key": skill.skill_key,
+            "version": skill.version,
+            "scope": skill.scope,
+            "tag_badge": skill.tag_badge,
+            "tagged_project_id": skill.tagged_project_id,
+            "tagged_project_key": skill.tagged_project_key,
+            "tagged_user_id": skill.tagged_user_id,
+            "composed_skills": skill.composed_skills,
+            "required_capabilities": skill.required_capabilities,
+            "optional_capabilities": skill.optional_capabilities,
+            "workflow_steps": skill.workflow_steps,
+        })
+
+        # 5. Initialize Governed Capability Executor & Deterministic Scheduler
+        executor = GovernedCapabilityExecutor(context=context, signal_store=signal_store)
+        scheduler = DeterministicScheduler(
+            context=context,
+            signal_store=signal_store,
+            executor=executor,
+            event_emitter=emit,
+        )
+
+        yield await emit("PLANNING_STARTED", {
+            "objective": f"Determine root cause and evidence-backed resolution for '{issue_title}'",
+            "active_skill": skill.name,
+        })
+
+        # 6. Execute Multi-Wave Deterministic Evidence Plan
+        evidence_bundles = await scheduler.execute_plan(
+            objective=f"Resolve incident: {issue_title}",
+        )
+
+        # 7. Model Synthesis (Finding, Root Cause, Routing, Actions)
         yield await emit("REASONING_STEP", {
-            "step": "PARALLEL_TOOL_DISPATCH",
-            "message": "Dispatching concurrent investigations in parallel across Splunk, PostgreSQL, and Kubernetes..."
+            "step": "SYNTHESIS",
+            "message": "Correlating multi-source evidence bundles across Jira, Database, Logs, and Runbooks...",
         })
 
-        # Define parallel investigation tasks
-        async def run_splunk():
-            await emit("TOOL_REQUESTED", {
-                "connector": "inst_splunk_corp",
-                "operation": "splunk.search_logs",
-                "args": {"query": f"index=billing error {error_logs or issue_title}", "time_window": "15m"}
-            })
-            res = await broker.execute_tool(
-                connector_instance_id="inst_splunk_corp",
-                operation="splunk.search_logs",
-                arguments={"query": f"index=billing error {error_logs or issue_title}", "time_window": "15m"}
-            )
-            await emit("TOOL_RESULT", {
-                "connector": "inst_splunk_corp",
-                "operation": "splunk.search_logs",
-                "result_summary": res["summary"],
-                "evidence_id": res.get("evidence_id")
-            })
-            return res
-
-        async def run_db():
-            await emit("TOOL_REQUESTED", {
-                "connector": "inst_postgres_billing",
-                "operation": "db.query",
-                "args": {"query": "SELECT transaction_id, status, gateway_error_code FROM payments WHERE status = 'PAYMENT_FAILED' ORDER BY created_at DESC LIMIT 10;"}
-            })
-            res = await broker.execute_tool(
-                connector_instance_id="inst_postgres_billing",
-                operation="db.query",
-                arguments={"query": "SELECT transaction_id, status, gateway_error_code FROM payments WHERE status = 'PAYMENT_FAILED' ORDER BY created_at DESC LIMIT 10;"}
-            )
-            await emit("TOOL_RESULT", {
-                "connector": "inst_postgres_billing",
-                "operation": "db.query",
-                "result_summary": res["summary"],
-                "evidence_id": res.get("evidence_id")
-            })
-            return res
-
-        async def run_k8s():
-            await emit("TOOL_REQUESTED", {
-                "connector": "inst_k8s_prod",
-                "operation": "kubernetes.get_pod_status",
-                "args": {"namespace": "billing-prod"}
-            })
-            res = await broker.execute_tool(
-                connector_instance_id="inst_k8s_prod",
-                operation="kubernetes.get_pod_status",
-                arguments={"namespace": "billing-prod"}
-            )
-            await emit("TOOL_RESULT", {
-                "connector": "inst_k8s_prod",
-                "operation": "kubernetes.get_pod_status",
-                "result_summary": res["summary"],
-                "evidence_id": res.get("evidence_id")
-            })
-            return res
-
-        # Execute all 3 tool investigations concurrently in parallel!
-        results = await asyncio.gather(run_splunk(), run_db(), run_k8s(), return_exceptions=True)
-        splunk_result, db_result, k8s_result = results
-
-        # 5. Synthesize Root Cause & Stage Governed Action Proposals
-        yield await emit("REASONING_STEP", {
-            "step": "ROOT_CAUSE_SYNTHESIS",
-            "message": "Parallel evidence gathered. Correlating telemetry across Splunk, PostgreSQL, and Kubernetes with OKF case patterns..."
-        })
-        await asyncio.sleep(0.2)
-
-        root_cause = (
-            "PostgreSQL Database Connection Pool Exhaustion on payment worker pods. "
-            "Recent batch sync cron saturated all 20/20 pooled connections, causing Stripe webhook workers "
-            "to timeout and trigger cascading HTTP 504 gateway failures."
+        finding = await ModelRouter.synthesize(
+            skill=skill,
+            evidence_bundles=evidence_bundles,
+            signals=signal_store,
+            coverage=scheduler.coverage,
+            run_id=self.run_id,
+            user_input=raw_combined_prompt,
         )
 
-        # Stage Proposal 1: Kubernetes Pod Restart
-        k8s_proposal_res = await broker.execute_tool(
-            connector_instance_id="inst_k8s_prod",
-            operation="kubernetes.restart_pod",
-            arguments={"pod_name": "stripe-webhook-worker-6789b-zxcvb", "namespace": "billing-prod"}
-        )
-        yield await emit("ACTION_PROPOSED", {
-            "proposal_id": k8s_proposal_res.get("action_proposal_id"),
-            "operation": "kubernetes.restart_pod",
-            "risk_level": "HIGH_IMPACT",
-            "target": k8s_proposal_res.get("target"),
-            "diff_preview": k8s_proposal_res.get("diff_preview"),
-            "canonical_hash": k8s_proposal_res.get("canonical_hash"),
-            "message": "Governed Action Proposal staged for pod rolling restart. Requires human authorization."
+        yield await emit("FINDING_SYNTHESIZED", {
+            "finding": finding.finding,
+            "primary_evidence": finding.primary_evidence,
+            "root_cause": finding.root_cause,
+            "confidence": finding.confidence,
+            "confidence_label": finding.confidence_label,
+            "routing": finding.routing,
+            "recommended_actions": finding.recommended_actions,
+            "missing_evidence": finding.missing_evidence,
         })
 
-        # Stage Proposal 2: Jira Triage Comment
-        jira_target = jira_ticket_key or "BILL-1049"
-        jira_proposal_res = await broker.execute_tool(
-            connector_instance_id="inst_jira_corp",
-            operation="jira.add_comment",
-            arguments={
-                "issue_key": jira_target,
-                "comment": f"PRISM Auto-Triage: Root cause verified as Connection Pool Exhaustion. Correlated with {len(broker.collected_evidence)} evidence artifacts."
-            }
+        # 8. Governed Action Proposal (Approval Gated Write Action)
+        # Stage proposal to post investigation report to Jira ticket
+        ticket_key = signal_store.get_first_value(SignalType.CASE_KEY, "FE-12345")
+        comment_text = (
+            f"Sentrix Autonomous Investigation Report:\n"
+            f"- Finding: {finding.finding}\n"
+            f"- Root Cause: {finding.root_cause}\n"
+            f"- Confidence: {finding.confidence_label} ({int(finding.confidence * 100)}%)\n"
+            f"- Primary Evidence:\n" + "\n".join(f"  * {e}" for e in finding.primary_evidence) + "\n"
+            f"- Recommended Routing: {finding.routing}\n"
+            f"- Action: {finding.recommended_actions[0] if finding.recommended_actions else 'Review configuration'}"
         )
-        yield await emit("ACTION_PROPOSED", {
-            "proposal_id": jira_proposal_res.get("action_proposal_id"),
-            "operation": "jira.add_comment",
-            "risk_level": "LOW_RISK",
-            "target": jira_proposal_res.get("target"),
-            "diff_preview": jira_proposal_res.get("diff_preview"),
-            "canonical_hash": jira_proposal_res.get("canonical_hash"),
-            "message": f"Governed Action Proposal staged for Jira {jira_target} comment."
-        })
 
-        # 8. Complete Run & Record Metrics
-        end_time = datetime.now(timezone.utc)
-        duration_ms = int((end_time - start_time).total_seconds() * 1000)
+        _, proposal = await executor.execute_operation(
+            tool_key="jira",
+            operation_key="ticket.comment.write",
+            arguments={"issueKey": ticket_key, "body": comment_text},
+            step_id="step_final_comment_proposal",
+        )
+
+        if proposal:
+            yield await emit("ACTION_PROPOSED", {
+                "proposal_id": proposal.id,
+                "operation": proposal.operation,
+                "risk_level": proposal.risk_level,
+                "target": proposal.target_resource,
+                "diff_preview": proposal.diff_preview,
+                "canonical_hash": proposal.canonical_hash,
+                "acting_principal": self.delegated_identity,
+                "message": f"Action requires user approval: Post investigation report to Jira ticket {ticket_key}.",
+            })
+
+        # 9. Complete Run & Persist Metrics
+        duration_ms = int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
 
         async with get_async_db() as db:
-            run_query = select(Run).where(Run.id == self.run_id)
-            r_res = await db.execute(run_query)
-            current_run = r_res.scalars().first()
-            if current_run:
-                current_run.status = "AWAITING_APPROVAL"
-                current_run.completed_at = end_time
-                current_run.latency_ms = duration_ms
-                current_run.total_tokens = 1840
+            run_upd = select(Run).where(Run.id == self.run_id)
+            r_res = await db.execute(run_upd)
+            active_run = r_res.scalars().first()
+            if active_run:
+                active_run.status = "AWAITING_APPROVAL" if executor.staged_proposals else "COMPLETED"
+                active_run.completed_at = datetime.now(timezone.utc)
+                active_run.latency_ms = duration_ms
+                invocations = (await db.execute(select(ModelInvocationLedgerRecord).where(
+                    ModelInvocationLedgerRecord.run_id == self.run_id))).scalars().all()
+                prompt_tokens = sum(i.prompt_tokens or 0 for i in invocations)
+                completion_tokens = sum(i.completion_tokens or 0 for i in invocations)
+                active_run.total_tokens = prompt_tokens + completion_tokens
+                active_run.model_route = invocations[-1].resolved_model if invocations else "unresolved"
 
-            # Record metrics
             metric = RunMetric(
                 id=f"met_{self.run_id[4:]}",
                 run_id=self.run_id,
                 project_id=self.project_id,
                 environment=self.environment,
-                time_to_first_token_ms=120,
+                time_to_first_token_ms=0,
                 total_duration_ms=duration_ms,
-                prompt_tokens=1240,
-                completion_tokens=600,
-                tool_invocations_count=len(broker.collected_evidence) + len(broker.generated_proposals),
-                action_proposals_count=len(broker.generated_proposals),
-                status="AWAITING_APPROVAL"
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                tool_invocations_count=len(scheduler.executed_steps),
+                action_proposals_count=len(executor.staged_proposals),
+                status="SUCCESS",
             )
-            metric.row_hash = metric.calculate_row_hash({"id": metric.id, "run": self.run_id})
+            metric.row_hash = metric.calculate_row_hash({"id": metric.id, "run_id": self.run_id})
             db.add(metric)
 
+        # Log skill execution & validation metrics into MLflow
+        try:
+            from backend.observability.mlflow_tracker import MLflowTracker
+            MLflowTracker.track_skill_execution(
+                skill_key=skill.skill_key,
+                skill_name=skill.name,
+                parameters={"environment": self.environment, "project_id": self.project_id},
+                latency_ms=float(duration_ms),
+                status="SUCCESS",
+                evidence_count=len(evidence_bundles),
+                coverage_score=finding.confidence,
+                run_id=self.run_id
+            )
+        except Exception as mlf_err:
+            logger.debug(f"MLflow auto-tracking skipped: {mlf_err}")
+
+        # Save project-scoped ADK artifacts to storage/projects/<project_id>/artifacts/<run_id>/
+        try:
+            from backend.azure.project_storage import project_storage
+            rca_md = f"""# Autonomous RCA Report: {issue_title}
+**Run ID:** `{self.run_id}`  
+**Project:** `{self.project_id}`  
+**Environment:** `{self.environment}`  
+**Engine:** Google ADK Autonomous Graph Engine  
+**Confidence:** {finding.confidence_label} ({int(finding.confidence * 100)}%)  
+
+## Executive Finding
+{finding.finding}
+
+## Root Cause Analysis
+{finding.root_cause}
+
+## Primary Evidence
+""" + "\n".join(f"- {e}" for e in finding.primary_evidence) + f"""
+
+## Recommended Remediations
+""" + "\n".join(f"- {a}" for a in finding.recommended_actions) + f"""
+
+## Governed Action Proposals
+- Proposals Staged: {len(executor.staged_proposals)}
+- Ticket Reference: `{ticket_key}`
+"""
+
+            staged_props_data = [
+                {
+                    "id": p.id,
+                    "operation": p.operation,
+                    "target": p.target_resource,
+                    "risk_level": p.risk_level,
+                    "hash": p.canonical_hash
+                }
+                for p in executor.staged_proposals
+            ]
+
+            eval_metrics_data = {
+                "confidence": finding.confidence,
+                "confidence_label": finding.confidence_label,
+                "duration_ms": duration_ms,
+                "tools_executed": len(scheduler.executed_steps),
+                "proposals_count": len(executor.staged_proposals),
+                "status": "AWAITING_APPROVAL" if executor.staged_proposals else "COMPLETED"
+            }
+
+            trace_data = {
+                "run_id": self.run_id,
+                "engine": "Google ADK Graph",
+                "steps": [
+                    {"step_id": s.step_id, "tool": s.tool_key, "operation": s.operation_key, "status": s.status}
+                    for s in scheduler.executed_steps
+                ],
+                "duration_ms": duration_ms
+            }
+
+            await project_storage.save_project_adk_artifacts(
+                project_id=self.project_id,
+                run_id=self.run_id,
+                rca_report=rca_md,
+                execution_trace=trace_data,
+                action_proposals=staged_props_data,
+                eval_metrics=eval_metrics_data,
+                evidence_bundle={"evidence_count": len(evidence_bundles)}
+            )
+        except Exception as p_err:
+            logger.warning(f"Could not persist project-scoped ADK artifacts: {p_err}")
+
+
+
         yield await emit("RUN_COMPLETED", {
-            "status": "AWAITING_APPROVAL",
-            "root_cause": root_cause,
-            "confidence_score": 0.96,
-            "evidence_count": len(broker.collected_evidence),
-            "proposals_count": len(broker.generated_proposals),
-            "duration_ms": duration_ms
+            "status": "AWAITING_APPROVAL" if executor.staged_proposals else "COMPLETED",
+            "run_id": self.run_id,
+            "root_cause": finding.root_cause,
+            "confidence_score": finding.confidence,
+            "evidence_count": len(evidence_bundles),
+            "proposals_count": len(executor.staged_proposals),
+            "duration_ms": duration_ms,
+            "coverage_complete": all(c.status == "complete" for c in scheduler.coverage if c.area in ["ticket", "database", "logs"]),
         })

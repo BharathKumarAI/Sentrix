@@ -69,7 +69,7 @@ export function OkfKnowledgeBrowser({ activeProject }) {
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
               <span style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink-tertiary)", textTransform: "uppercase" }}>
-                {activeProject?.project_key || "BILLING"} • OKF v2.0 KNOWLEDGE FABRIC
+                {activeProject?.project_key || ""} • OKF v2.0 KNOWLEDGE FABRIC
               </span>
               <span className="badge badge-teal">Continuous Learning</span>
               <span className="badge badge-magenta">Case-Based Precedents</span>
@@ -147,9 +147,9 @@ export function OkfKnowledgeBrowser({ activeProject }) {
                   </div>
                 </div>
 
-                <h4 style={{ fontSize: "14px", color: "#fff", lineHeight: "1.4" }}>{c.title}</h4>
+                <h4 style={{ fontSize: "14px", color: "var(--ink-primary)", lineHeight: "1.4" }}>{c.title}</h4>
 
-                <div style={{ marginTop: "10px", padding: "10px", borderRadius: "6px", background: "rgba(0,0,0,0.3)" }}>
+                <div style={{ marginTop: "10px", padding: "10px", borderRadius: "6px", background: "var(--bg-app)", border: "1px solid var(--border-subtle)" }}>
                   <div style={{ fontSize: "10px", color: "var(--ink-tertiary)", textTransform: "uppercase", fontWeight: "700" }}>
                     Verified Root Cause
                   </div>
@@ -160,10 +160,10 @@ export function OkfKnowledgeBrowser({ activeProject }) {
               </div>
 
               {/* Tags & Reference Count */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "10px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid var(--border-subtle)", paddingTop: "10px" }}>
                 <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
                   {c.tags?.slice(0, 3).map((t) => (
-                    <span key={t} className="mono" style={{ fontSize: "10px", background: "rgba(255,255,255,0.06)", padding: "2px 6px", borderRadius: "4px" }}>
+                    <span key={t} className="mono" style={{ fontSize: "10px", background: "var(--bg-app)", border: "1px solid var(--border-subtle)", color: "var(--ink-secondary)", padding: "2px 6px", borderRadius: "4px" }}>
                       #{t}
                     </span>
                   ))}
@@ -185,7 +185,7 @@ export function OkfKnowledgeBrowser({ activeProject }) {
                 <span style={{ fontSize: "11px", color: "var(--accent-teal)" }}>Helpful Score: {r.helpful_score}</span>
               </div>
 
-              <h4 style={{ fontSize: "15px", color: "#fff" }}>{r.title}</h4>
+              <h4 style={{ fontSize: "15px", color: "var(--ink-primary)" }}>{r.title}</h4>
 
               <div style={{ fontSize: "12px", color: "var(--ink-secondary)", whiteSpace: "pre-line", maxHeight: "160px", overflowY: "auto" }}>
                 {r.content}

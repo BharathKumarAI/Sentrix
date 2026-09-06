@@ -1,0 +1,3 @@
+# Sentrix Cloud Extras: Kubernetes & Cloud Native Pod Operators
+-r requirements.txt
+kubernetes>=29.0.0

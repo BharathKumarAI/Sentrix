@@ -1,5 +1,5 @@
 """
-Database connection and session management for PRISM.
+Database connection and session management for Sentrix.
 Supports both asynchronous (asyncpg) and synchronous (psycopg) SQLAlchemy engines.
 """
 import os
@@ -8,15 +8,11 @@ from typing import AsyncGenerator, Generator
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
+from backend.azure.postgres_adapter import get_postgres_urls
 
-DATABASE_URL_SYNC = os.getenv(
-    "DATABASE_URL_SYNC",
-    "postgresql+psycopg://kbk@localhost:5432/prism_db"
-)
-DATABASE_URL_ASYNC = os.getenv(
-    "DATABASE_URL_ASYNC",
-    "postgresql+asyncpg://kbk@localhost:5432/prism_db"
-)
+_urls = get_postgres_urls()
+DATABASE_URL_SYNC = _urls["sync_url"]
+DATABASE_URL_ASYNC = _urls["async_url"]
 
 # Sync Engine (for scripts, seeding, migrations)
 sync_engine = create_engine(
@@ -70,19 +66,26 @@ def get_sync_db() -> Generator[Session, None, None]:
 
 async def check_db_health() -> dict:
     """Validate database connectivity and schema presence."""
+    import time
     from sqlalchemy import text
+    t0 = time.perf_counter()
     try:
         async with AsyncSessionLocal() as session:
             result = await session.execute(text("SELECT current_database(), current_user, version()"))
             row = result.fetchone()
+            latency_ms = round((time.perf_counter() - t0) * 1000, 2)
             return {
                 "status": "HEALTHY",
                 "database": row[0],
                 "user": row[1],
-                "version": row[2]
+                "version": row[2],
+                "latency_ms": latency_ms
             }
     except Exception as exc:
+        latency_ms = round((time.perf_counter() - t0) * 1000, 2)
         return {
             "status": "DOWN",
-            "error": str(exc)
+            "error": str(exc),
+            "latency_ms": latency_ms
         }
+

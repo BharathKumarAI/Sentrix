@@ -1,18 +1,51 @@
+# ==============================================================================
+# PRISM / Sentrix Root .gitignore
+# ==============================================================================
+
 # Documents & Specs
 PRISM_Detailed_System_Design.docx
 
 # Reference assets
 references/
 
+# ==============================================================================
+# Local-Only Runtime Storage, Quarantined Demonstration Assets & State
+# ==============================================================================
+storage/
+**/storage/
+.local-data/
+**/.local-data/
+backend/data/
+**/data/logs/
+local/
+.local/
+*.local/
+mlruns/
+**/mlruns/
+mlartifacts/
+**/mlartifacts/
+.mlflow/
+**/.mlflow/
+wandb/
+**/wandb/
+.tensorboard/
+**/.tensorboard/
+
+# ==============================================================================
 # Environment Variables & Configs (Frontend & Backend)
+# ==============================================================================
 .env
 .env.*
+.env.local
+.env.*.local
 !.env.example
 !.env.template
 .secrets
 secrets.*
 
-# API Keys, Service Accounts & Auth Tokens
+# ==============================================================================
+# API Keys, Service Accounts, Auth Tokens & Package Registry Configs
+# ==============================================================================
 *credentials*.json
 *serviceAccount*.json
 *service-account*.json
@@ -24,7 +57,9 @@ token.json
 .pypirc
 .netrc
 
+# ==============================================================================
 # Private Keys, Certificates & Keystores
+# ==============================================================================
 *.pem
 *.key
 *.cert
@@ -36,26 +71,165 @@ token.json
 id_rsa*
 id_ed25519*
 
+# ==============================================================================
 # Cloud & Deployment Secrets / Profiles
+# ==============================================================================
 .aws/
 .gcloud/
 .azure/
 
-# Local Databases, Dumps & Logs
-*.sql
-*.dump
+# ==============================================================================
+# Local Databases, Dumps & Backups
+# ==============================================================================
+*.db
+*.db-*
+*.db.bak
+*.db-wal
+*.db-shm
+*.db-journal
 *.sqlite
 *.sqlite3
-*.log
+*.sqlite-*
+*.sqlite3-*
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite-journal
+*.sqlite3-wal
+*.sqlite3-shm
+*.sqlite3-journal
+*.duckdb
+*.duckdb.wal
+*.rdb
+dump.rdb
+*.ldb
+*.mdb
+*.accdb
+*.sql
+*.psql
+*.pgsql
+*.dump
+*.dump.*
+*.dmp
+*.bak
 
-# Python Cache & Bytecode
+# Explicit local database files & directories
+sentrix.db*
+**/sentrix.db*
+prism.db*
+**/prism.db*
+mlflow.db*
+**/mlflow.db*
+sqlite.db*
+**/sqlite.db*
+database.db*
+**/database.db*
+app.db*
+**/app.db*
+dev.db*
+**/dev.db*
+test.db*
+**/test.db*
+**/database/*.db*
+**/database/*.sqlite*
+**/data/*.db*
+**/data/*.sqlite*
+
+# Canonical schema definitions are application source, not database dumps
+!backend/database/schema.sql
+!**/schema.sql
+
+# ==============================================================================
+# Application & Server Logs
+# ==============================================================================
+*.log
+logs/
+**/logs/
+
+# ==============================================================================
+# Python Cache, Bytecode & Build Artifacts
+# ==============================================================================
 __pycache__/
 *.py[cod]
 *$py.class
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# System / OS & Editor files
+# ==============================================================================
+# Python Virtual Environments
+# ==============================================================================
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# ==============================================================================
+# Python Test & Tooling Caches
+# ==============================================================================
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+
+# ==============================================================================
+# Node.js / Frontend
+# ==============================================================================
+node_modules/
+dist-ssr/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-store/
+.vite/
+.turbo/
+*.tsbuildinfo
+
+# ==============================================================================
+# OS & Filesystem Metadata
+# ==============================================================================
 .DS_Store
+.DS_Store?
+._*
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ==============================================================================
+# Editors & IDEs
+# ==============================================================================
 .idea/
 .vscode/
 *.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# ==============================================================================
+# Temporary & Backup files
+# ==============================================================================
+*.tmp
+*.temp
+*.bak

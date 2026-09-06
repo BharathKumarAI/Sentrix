@@ -34,7 +34,7 @@ import {
 
 export function EnvironmentMatrixEditor({ activeProject }) {
   const projectId = activeProject?.id || "prj_billing";
-  const projectKey = activeProject?.project_key || "BILLING";
+  const projectKey = activeProject?.project_key || "";
 
   const [mappings, setMappings] = useState([]);
   const [connectors, setConnectors] = useState([]);
@@ -71,19 +71,10 @@ export function EnvironmentMatrixEditor({ activeProject }) {
         fetchConnectorInstances().catch(() => [])
       ]);
 
-      if (Array.isArray(mapsData) && mapsData.length > 0) {
+      if (Array.isArray(mapsData)) {
         setMappings(mapsData);
       } else {
-        // Fallback default rich mappings if initial database is unseeded
-        setMappings([
-          { id: "map_1", project_id: projectId, project_environment: "prod", connector_id: "inst_postgres_billing", connector_name: "Billing Primary Database", connector_key: "postgres", tool_environment: "billing-prod-primary:5432", is_active: true, notes: "Main transactional ledger pool" },
-          { id: "map_2", project_id: projectId, project_environment: "prod", connector_id: "inst_k8s_prod", connector_name: "Production EKS Cluster", connector_key: "kubernetes", tool_environment: "k8s-prod-us-east-1", is_active: true, notes: "EKS worker node operator" },
-          { id: "map_3", project_id: projectId, project_environment: "prod", connector_id: "inst_splunk_corp", connector_name: "Enterprise Splunk Indexer", connector_key: "splunk", tool_environment: "splunk-prod-cluster", is_active: true, notes: "Audit log stream indexer" },
-          { id: "map_4", project_id: projectId, project_environment: "prod", connector_id: "inst_jira_corp", connector_name: "Corporate Jira Cloud", connector_key: "jira", tool_environment: "jira-cloud-prod", is_active: true, notes: "Fix squad ticket desk" },
-          { id: "map_5", project_id: projectId, project_environment: "staging", connector_id: "inst_postgres_billing", connector_name: "Billing Staging Database", connector_key: "postgres", tool_environment: "billing-staging-db:5432", is_active: true, notes: "Staging database replica" },
-          { id: "map_6", project_id: projectId, project_environment: "staging", connector_id: "inst_k8s_prod", connector_name: "Staging Kubernetes Cluster", connector_key: "kubernetes", tool_environment: "k8s-staging-us-east", is_active: true, notes: "Staging load test grid" },
-          { id: "map_7", project_id: projectId, project_environment: "dev", connector_id: "inst_postgres_billing", connector_name: "Billing Local Dev Database", connector_key: "postgres", tool_environment: "billing-dev-mock:5432", is_active: true, notes: "Local mocked SQLite/PostgreSQL" }
-        ]);
+        setMappings([]);
       }
 
       if (Array.isArray(connData) && connData.length > 0) {
@@ -97,10 +88,13 @@ export function EnvironmentMatrixEditor({ activeProject }) {
     }
   };
 
-  const projectEnvironments = Array.from(new Set(mappings.map((m) => m.project_environment)));
-  if (projectEnvironments.length === 0) {
-    projectEnvironments.push("dev", "staging", "prod");
-  }
+  const projectEnvironments = Array.from(
+    new Set([
+      ...(activeProject?.environments || []),
+      ...mappings.map((m) => m.project_environment),
+      "prod", "staging", "dev"
+    ].filter(Boolean))
+  );
 
   // Handle Editing an existing mapping
   const handleOpenEdit = (m) => {
@@ -158,23 +152,10 @@ export function EnvironmentMatrixEditor({ activeProject }) {
         notes: newNotes.trim()
       });
 
-      const newId = `map_${projectId}_${newProjectEnv}_${Math.random().toString(36).substr(2, 6)}`;
-      const newObj = {
-        id: newId,
-        project_id: projectId,
-        project_environment: newProjectEnv,
-        connector_id: newConnectorId || "inst_custom_tool",
-        connector_name: selectedConn.name,
-        connector_key: selectedConn.connector_key || "connector",
-        tool_environment: newToolEnvInput.trim(),
-        is_active: true,
-        notes: newNotes.trim()
-      };
-
-      setMappings((prev) => [newObj, ...prev]);
       setShowAddModal(false);
       setNewToolEnvInput("");
       setNewNotes("");
+      loadData();
     } catch (err) {
       console.error("Failed to add mapping", err);
     } finally {
@@ -202,7 +183,7 @@ export function EnvironmentMatrixEditor({ activeProject }) {
         [mappingId]: {
           status: "SUCCESS",
           latency: (Math.random() * 14 + 5).toFixed(1) + "ms",
-          checkedAt: "Just now"
+          checkedAt: new Date().toISOString()
         }
       }));
       setTestingId(null);
@@ -307,7 +288,7 @@ export function EnvironmentMatrixEditor({ activeProject }) {
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative", zIndex: 2 }}>
           <div>
-            <h3 style={{ fontSize: "15px", fontWeight: 700, color: "#fff", display: "flex", alignItems: "center", gap: "8px" }}>
+            <h3 style={{ fontSize: "15px", fontWeight: 700, color: "var(--ink-primary)", display: "flex", alignItems: "center", gap: "8px" }}>
               <Globe size={16} color="var(--accent-teal)" />
               Interactive Telemetry Conduit Topology
             </h3>
@@ -317,7 +298,7 @@ export function EnvironmentMatrixEditor({ activeProject }) {
           </div>
 
           {/* Project Env Quick Selector Pills */}
-          <div style={{ display: "flex", gap: "6px", background: "rgba(0,0,0,0.4)", padding: "4px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
+          <div style={{ display: "flex", gap: "6px", background: "var(--bg-app)", padding: "4px", borderRadius: "8px", border: "1px solid var(--border-subtle)" }}>
             {projectEnvironments.map((env) => {
               const isActive = activeHoverEnv === env;
               return (
@@ -365,7 +346,7 @@ export function EnvironmentMatrixEditor({ activeProject }) {
               </span>
               <span className="badge badge-magenta" style={{ textTransform: "uppercase" }}>{activeHoverEnv}</span>
             </div>
-            <div style={{ fontSize: "18px", fontWeight: 800, color: "#fff", textTransform: "uppercase" }}>
+            <div style={{ fontSize: "18px", fontWeight: 800, color: "var(--ink-primary)", textTransform: "uppercase" }}>
               {projectKey} • {activeHoverEnv}
             </div>
             <div style={{ fontSize: "11px", color: "var(--accent-teal)" }}>
@@ -395,7 +376,7 @@ export function EnvironmentMatrixEditor({ activeProject }) {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <strong style={{ fontSize: "12px", color: "#fff" }}>{m.connector_name}</strong>
+                  <strong style={{ fontSize: "12px", color: "var(--ink-primary)" }}>{m.connector_name}</strong>
                   <span className="badge badge-teal" style={{ fontSize: "9px" }}>{m.connector_key}</span>
                 </div>
                 <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "var(--accent-teal)" }}>

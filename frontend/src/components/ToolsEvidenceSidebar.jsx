@@ -11,13 +11,22 @@ import {
   Clock, 
   ExternalLink,
   Copy,
-  Check
+  Check,
+  FileCode,
+  Activity,
+  Zap,
+  Ticket,
+  Search
 } from "lucide-react";
 
 export function ToolsEvidenceSidebar({ evidence, isOpen, onClose }) {
   const [expandedTool, setExpandedTool] = useState({
+    jira: true,
+    oracle: true,
+    unix: true,
     splunk: true,
-    postgres: true,
+    confluence: false,
+    postgres: false,
     kubernetes: false,
     okf: false
   });
@@ -38,10 +47,36 @@ export function ToolsEvidenceSidebar({ evidence, isOpen, onClose }) {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  const splunk = evidence?.splunk;
-  const postgres = evidence?.postgres;
-  const k8s = evidence?.kubernetes;
-  const okf = evidence?.okf;
+  const getToolMeta = (key) => {
+    switch (key) {
+      case "jira":
+        return { name: "Atlassian Jira ITSM", icon: Ticket, color: "var(--accent-blue)", bg: "rgba(59, 130, 246, 0.15)" };
+      case "oracle":
+        return { name: "Oracle Billing & Core DB", icon: Database, color: "var(--accent-amber)", bg: "rgba(245, 158, 11, 0.15)" };
+      case "unix":
+        return { name: "Unix / Host Log Inspector", icon: FileCode, color: "var(--accent-teal)", bg: "rgba(78, 230, 199, 0.15)" };
+      case "splunk":
+        return { name: "Splunk Enterprise Logs", icon: Server, color: "var(--accent-amber)", bg: "rgba(245, 158, 11, 0.15)" };
+      case "signalfx":
+        return { name: "Splunk Observability (SignalFx)", icon: Activity, color: "var(--accent-violet)", bg: "rgba(139, 125, 255, 0.15)" };
+      case "kafka":
+        return { name: "Apache Kafka Event Bus", icon: Zap, color: "var(--prism-pink)", bg: "rgba(225, 29, 72, 0.15)" };
+      case "qtest":
+        return { name: "Tricentis qTest", icon: Activity, color: "var(--accent-teal)", bg: "rgba(78, 230, 199, 0.15)" };
+      case "confluence":
+        return { name: "Confluence Runbooks", icon: BookOpen, color: "var(--accent-violet)", bg: "rgba(139, 125, 255, 0.15)" };
+      case "postgres":
+        return { name: "PostgreSQL Primary", icon: Database, color: "var(--accent-blue)", bg: "rgba(59, 130, 246, 0.15)" };
+      case "kubernetes":
+        return { name: "Kubernetes Cluster", icon: Terminal, color: "var(--prism-pink)", bg: "rgba(225, 29, 72, 0.15)" };
+      case "okf":
+        return { name: "OKF Knowledge Fabric", icon: BookOpen, color: "var(--accent-violet)", bg: "rgba(139, 125, 255, 0.15)" };
+      default:
+        return { name: key.toUpperCase(), icon: Layers, color: "var(--ink-secondary)", bg: "rgba(255, 255, 255, 0.1)" };
+    }
+  };
+
+  const evidenceEntries = evidence ? Object.entries(evidence) : [];
 
   return (
     <aside className="evidence-inspector-sidebar">
@@ -60,7 +95,7 @@ export function ToolsEvidenceSidebar({ evidence, isOpen, onClose }) {
             Tools Evidence
           </h3>
           <span className="mono badge badge-magenta" style={{ fontSize: "9.5px" }}>
-            4 Active
+            {evidenceEntries.length} Tools Acquired
           </span>
         </div>
 
@@ -78,205 +113,127 @@ export function ToolsEvidenceSidebar({ evidence, isOpen, onClose }) {
       <div style={{
         flex: 1,
         overflowY: "auto",
-        padding: "16px"
+        padding: "16px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "12px"
       }}>
-        {/* Tool 1: Splunk Logs */}
-        {splunk && (
-          <div className="tool-evidence-card">
-            <div 
-              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}
-              onClick={() => toggleTool("splunk")}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <div style={{ width: "24px", height: "24px", borderRadius: "6px", background: "rgba(245, 158, 11, 0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Server size={14} color="var(--accent-amber)" />
+        {evidenceEntries.map(([key, toolData]) => {
+          const meta = getToolMeta(key);
+          const Icon = meta.icon;
+          const isExpanded = expandedTool[key] !== false;
+
+          return (
+            <div key={key} className="tool-evidence-card">
+              <div 
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}
+                onClick={() => toggleTool(key)}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div style={{ width: "24px", height: "24px", borderRadius: "6px", background: meta.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Icon size={14} color={meta.color} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "12px", fontWeight: "700", color: "var(--ink-primary)" }}>
+                      {toolData.tool_name || meta.name}
+                    </div>
+                    <span className="mono" style={{ fontSize: "10px", color: "var(--ink-tertiary)" }}>
+                      {toolData.latency ? `Latency: ${toolData.latency}` : (toolData.latency_ms ? `${toolData.latency_ms}ms` : "Acquired")}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <div style={{ fontSize: "12px", fontWeight: "700", color: "var(--ink-primary)" }}>{splunk.tool_name}</div>
-                  <span className="mono" style={{ fontSize: "10px", color: "var(--ink-tertiary)" }}>Latency: {splunk.latency}</span>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span className={`badge ${toolData.status === "FAILED" ? "badge-rose" : "badge-teal"}`} style={{ fontSize: "9px" }}>
+                    {toolData.status || "HEALTHY"}
+                  </span>
+                  {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                 </div>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <span className="badge badge-teal" style={{ fontSize: "9px" }}>{splunk.status}</span>
-                {expandedTool.splunk ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              </div>
-            </div>
-
-            {expandedTool.splunk && (
-              <div style={{ marginTop: "12px", borderTop: "1px solid var(--border-subtle)", paddingTop: "10px" }}>
-                <div style={{ fontSize: "10.5px", color: "var(--ink-tertiary)", textTransform: "uppercase", fontWeight: "600", marginBottom: "4px" }}>
-                  Search Query Executed:
-                </div>
-                <div className="mono" style={{ fontSize: "11px", color: "var(--accent-teal)", background: "var(--bg-canvas)", border: "1px solid var(--border-subtle)", padding: "6px 8px", borderRadius: "4px", marginBottom: "8px", overflowX: "auto" }}>
-                  {splunk.query}
-                </div>
-
-                <div style={{ fontSize: "10.5px", color: "var(--ink-tertiary)", textTransform: "uppercase", fontWeight: "600", marginBottom: "6px" }}>
-                  Matching Events ({splunk.events?.length || 0}):
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  {splunk.events?.map((evt, i) => (
-                    <div key={i} style={{ background: "var(--bg-canvas)", border: "1px solid var(--border-subtle)", padding: "8px", borderRadius: "6px", fontSize: "11px", borderLeft: evt.level === "ERROR" ? "3px solid var(--accent-rose)" : "3px solid var(--accent-amber)" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
-                        <span className="mono" style={{ fontSize: "9.5px", color: "var(--ink-tertiary)" }}>{evt.time}</span>
-                        <span className={`badge ${evt.level === "ERROR" ? "badge-rose" : "badge-amber"}`} style={{ fontSize: "8.5px", padding: "1px 5px" }}>
-                          {evt.level}
+              {isExpanded && (
+                <div style={{ marginTop: "12px", borderTop: "1px solid var(--border-subtle)", paddingTop: "10px" }}>
+                  {/* Operation & Canonical Hash */}
+                  {toolData.operation && (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                      <span className="badge badge-violet mono" style={{ fontSize: "9px" }}>
+                        {toolData.operation}
+                      </span>
+                      {toolData.canonical_hash && (
+                        <span className="mono" style={{ fontSize: "9px", color: "var(--ink-tertiary)" }} title={toolData.canonical_hash}>
+                          sha256:{toolData.canonical_hash.substring(0, 8)}...
                         </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Observations */}
+                  {toolData.observations && toolData.observations.length > 0 && (
+                    <div style={{ marginBottom: "8px" }}>
+                      <div style={{ fontSize: "10px", color: "var(--ink-tertiary)", textTransform: "uppercase", fontWeight: "600", marginBottom: "4px" }}>
+                        Observations ({toolData.observations.length}):
                       </div>
-                      <div style={{ color: "var(--ink-primary)", lineHeight: "1.4" }}>{evt.msg}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tool 2: Governed PostgreSQL Replica */}
-        {postgres && (
-          <div className="tool-evidence-card">
-            <div 
-              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}
-              onClick={() => toggleTool("postgres")}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <div style={{ width: "24px", height: "24px", borderRadius: "6px", background: "rgba(59, 130, 246, 0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Database size={14} color="var(--accent-blue)" />
-                </div>
-                <div>
-                  <div style={{ fontSize: "12px", fontWeight: "700", color: "var(--ink-primary)" }}>{postgres.tool_name}</div>
-                  <span className="mono" style={{ fontSize: "10px", color: "var(--ink-tertiary)" }}>Latency: {postgres.latency}</span>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <span className="badge badge-amber" style={{ fontSize: "9px" }}>{postgres.status}</span>
-                {expandedTool.postgres ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              </div>
-            </div>
-
-            {expandedTool.postgres && (
-              <div style={{ marginTop: "12px", borderTop: "1px solid var(--border-subtle)", paddingTop: "10px" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", marginBottom: "8px" }}>
-                  <div style={{ background: "var(--bg-canvas)", border: "1px solid var(--border-subtle)", padding: "6px", borderRadius: "4px" }}>
-                    <div style={{ fontSize: "9.5px", color: "var(--ink-tertiary)" }}>Active / Max Pool</div>
-                    <div className="mono" style={{ fontSize: "12px", fontWeight: "700", color: "var(--accent-rose)" }}>
-                      {postgres.metrics?.active_connections}
-                    </div>
-                  </div>
-                  <div style={{ background: "var(--bg-canvas)", border: "1px solid var(--border-subtle)", padding: "6px", borderRadius: "4px" }}>
-                    <div style={{ fontSize: "9.5px", color: "var(--ink-tertiary)" }}>Waiting Threads</div>
-                    <div className="mono" style={{ fontSize: "12px", fontWeight: "700", color: "var(--accent-amber)" }}>
-                      {postgres.metrics?.waiting_threads}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ fontSize: "10.5px", color: "var(--ink-tertiary)", textTransform: "uppercase", fontWeight: "600", marginBottom: "4px" }}>
-                  Slow Query Isolated:
-                </div>
-                <div className="mono" style={{ fontSize: "10.5px", color: "var(--accent-teal)", background: "var(--bg-canvas)", border: "1px solid var(--border-subtle)", padding: "6px 8px", borderRadius: "4px", overflowX: "auto" }}>
-                  {postgres.slow_query}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Tool 3: Kubernetes Cluster */}
-        {k8s && (
-          <div className="tool-evidence-card">
-            <div 
-              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}
-              onClick={() => toggleTool("kubernetes")}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <div style={{ width: "24px", height: "24px", borderRadius: "6px", background: "rgba(225, 29, 72, 0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Terminal size={14} color="var(--prism-pink)" />
-                </div>
-                <div>
-                  <div style={{ fontSize: "12px", fontWeight: "700", color: "var(--ink-primary)" }}>{k8s.tool_name}</div>
-                  <span className="mono" style={{ fontSize: "10px", color: "var(--ink-tertiary)" }}>Latency: {k8s.latency}</span>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <span className="badge badge-rose" style={{ fontSize: "9px" }}>{k8s.status}</span>
-                {expandedTool.kubernetes ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              </div>
-            </div>
-
-            {expandedTool.kubernetes && (
-              <div style={{ marginTop: "12px", borderTop: "1px solid var(--border-subtle)", paddingTop: "10px" }}>
-                <div style={{ fontSize: "10.5px", color: "var(--ink-tertiary)", textTransform: "uppercase", fontWeight: "600", marginBottom: "4px" }}>
-                  Inspection Command:
-                </div>
-                <div className="mono" style={{ fontSize: "10.5px", color: "var(--accent-teal)", background: "var(--bg-canvas)", border: "1px solid var(--border-subtle)", padding: "6px 8px", borderRadius: "4px", marginBottom: "8px" }}>
-                  {k8s.command}
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  {k8s.pod_events?.map((pe, i) => (
-                    <div key={i} style={{ background: "var(--bg-canvas)", border: "1px solid var(--border-subtle)", padding: "8px", borderRadius: "6px", fontSize: "11px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
-                        <span className="mono" style={{ fontSize: "9.5px", color: "var(--ink-tertiary)" }}>{pe.time}</span>
-                        <span className="badge badge-amber" style={{ fontSize: "8.5px", padding: "1px 5px" }}>{pe.reason}</span>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                        {toolData.observations.map((obs, i) => (
+                          <div key={i} style={{ background: "var(--bg-canvas)", border: "1px solid var(--border-subtle)", padding: "6px 8px", borderRadius: "4px", fontSize: "10.5px", color: "var(--ink-primary)", lineHeight: "1.4" }}>
+                            • {obs}
+                          </div>
+                        ))}
                       </div>
-                      <div style={{ color: "var(--ink-primary)", lineHeight: "1.4" }}>{pe.message}</div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+                  )}
 
-        {/* Tool 4: OKF v2.0 Knowledge Precedents */}
-        {okf && (
-          <div className="tool-evidence-card">
-            <div 
-              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}
-              onClick={() => toggleTool("okf")}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <div style={{ width: "24px", height: "24px", borderRadius: "6px", background: "rgba(139, 125, 255, 0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <BookOpen size={14} color="var(--accent-violet)" />
-                </div>
-                <div>
-                  <div style={{ fontSize: "12px", fontWeight: "700", color: "var(--ink-primary)" }}>{okf.tool_name}</div>
-                  <span className="mono" style={{ fontSize: "10px", color: "var(--ink-tertiary)" }}>Match: {okf.similarity}</span>
-                </div>
-              </div>
+                  {/* Discovered Signals */}
+                  {toolData.discovered_signals && Object.keys(toolData.discovered_signals).length > 0 && (
+                    <div style={{ marginBottom: "8px" }}>
+                      <div style={{ fontSize: "10px", color: "var(--ink-tertiary)", textTransform: "uppercase", fontWeight: "600", marginBottom: "4px" }}>
+                        Discovered Signals:
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                        {Object.entries(toolData.discovered_signals).map(([sigKey, sigVal]) => (
+                          <span key={sigKey} className="badge badge-amber mono" style={{ fontSize: "9px" }}>
+                            {sigKey}: {String(sigVal)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <span className="badge badge-violet" style={{ fontSize: "9px" }}>OKF v2.0</span>
-                {expandedTool.okf ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              </div>
+                  {/* Generic query/command */}
+                  {toolData.query && (
+                    <div style={{ marginBottom: "8px" }}>
+                      <div style={{ fontSize: "10px", color: "var(--ink-tertiary)", textTransform: "uppercase", fontWeight: "600", marginBottom: "4px" }}>
+                        Query:
+                      </div>
+                      <div className="mono" style={{ fontSize: "10.5px", color: "var(--accent-teal)", background: "var(--bg-canvas)", border: "1px solid var(--border-subtle)", padding: "6px 8px", borderRadius: "4px", overflowX: "auto" }}>
+                        {toolData.query}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Generic events list */}
+                  {toolData.events && toolData.events.length > 0 && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                      {toolData.events.map((evt, i) => (
+                        <div key={i} style={{ background: "var(--bg-canvas)", border: "1px solid var(--border-subtle)", padding: "8px", borderRadius: "6px", fontSize: "11px", borderLeft: evt.level === "ERROR" ? "3px solid var(--accent-rose)" : "3px solid var(--accent-amber)" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
+                            <span className="mono" style={{ fontSize: "9.5px", color: "var(--ink-tertiary)" }}>{evt.time || ""}</span>
+                            <span className={`badge ${evt.level === "ERROR" ? "badge-rose" : "badge-amber"}`} style={{ fontSize: "8.5px", padding: "1px 5px" }}>
+                              {evt.level || "INFO"}
+                            </span>
+                          </div>
+                          <div style={{ color: "var(--ink-primary)", lineHeight: "1.4" }}>{evt.msg || JSON.stringify(evt)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-
-            {expandedTool.okf && (
-              <div style={{ marginTop: "12px", borderTop: "1px solid var(--border-subtle)", paddingTop: "10px" }}>
-                <div style={{ fontSize: "11px", fontWeight: "600", color: "var(--ink-primary)", marginBottom: "4px" }}>
-                  {okf.matched_node}
-                </div>
-                <div style={{ fontSize: "10.5px", color: "var(--accent-teal)", marginBottom: "8px" }}>
-                  Precedent: {okf.precedent_incident}
-                </div>
-
-                <div style={{ fontSize: "10.5px", color: "var(--ink-tertiary)", textTransform: "uppercase", fontWeight: "600", marginBottom: "4px" }}>
-                  Recommended Steps:
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px", fontSize: "11px", color: "var(--ink-secondary)" }}>
-                  {okf.runbook_steps?.map((st, i) => (
-                    <div key={i}>{st}</div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+          );
+        })}
       </div>
     </aside>
   );
 }
+

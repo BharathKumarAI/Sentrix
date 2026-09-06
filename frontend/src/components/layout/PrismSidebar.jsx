@@ -9,6 +9,7 @@ import {
   Wrench, 
   GitFork, 
   BookOpen, 
+  Folder,
   Ticket, 
   PlayCircle, 
   ShieldCheck, 
@@ -25,6 +26,8 @@ import {
   LogOut, 
   ChevronLeft, 
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   ArrowRightLeft,
   Search,
   CheckCircle2,
@@ -36,23 +39,26 @@ import {
   PanelLeftOpen
 } from "lucide-react";
 import { BrandLogo } from "../BrandLogo";
+import { useAuth } from "../../context/AuthContext";
 
 export function PrismSidebar({
   activeProject,
   projects,
   onSelectProject,
   collapsed: controlledCollapsed,
-  onToggleCollapse: controlledToggleCollapse
+  onToggleCollapse: controlledToggleCollapse,
+  onOpenNewProjectModal
 }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { currentPersona, isPlatformAdmin, isGeneralViewer, isProjectViewer, isProjectManager, isProjectAnalyst, isProjectOwner } = useAuth();
   const [localCollapsed, setLocalCollapsed] = useState(false);
 
   const collapsed = controlledCollapsed !== undefined ? controlledCollapsed : localCollapsed;
   const toggleCollapse = controlledToggleCollapse || (() => setLocalCollapsed(!localCollapsed));
 
   const isAdmin = location.pathname.startsWith("/admin");
-  const projectKey = activeProject?.project_key || "BILLING";
+  const projectKey = activeProject?.project_key || "";
 
   // Project mode nav groups — Live Triage Board pushed to the very top with live pulsing animation
   const projectNav = [
@@ -68,7 +74,7 @@ export function PrismSidebar({
           isLiveGlow: true 
         },
         { label: "Overview", path: `/p/${projectKey}/overview`, icon: Home },
-        { label: "Auto-Triage Hub", path: `/p/${projectKey}/triage`, icon: Zap, badge: "ADK 2.8" },
+        { label: "Auto-Triage Hub", path: `/p/${projectKey}/triage`, icon: Zap, badge: "LIVE" },
         { label: "Investigation Stream", path: `/p/${projectKey}/investigations`, icon: MessageSquare },
       ]
     },
@@ -77,7 +83,9 @@ export function PrismSidebar({
       items: [
         { label: "Agents", path: `/p/${projectKey}/agents`, icon: Cpu },
         { label: "Tools & Connectors", path: `/p/${projectKey}/tools`, icon: Wrench },
+        { label: "Agent Harness & Plugins", path: `/p/${projectKey}/harness`, icon: Zap, badge: "Plugins", badgeColor: "badge-purple" },
         { label: "Workflows", path: `/p/${projectKey}/workflows`, icon: GitFork },
+        { label: "Artifacts & Skills", path: `/p/${projectKey}/artifacts`, icon: Folder },
         { label: "Knowledge", path: `/p/${projectKey}/knowledge`, icon: BookOpen },
       ]
     },
@@ -101,7 +109,7 @@ export function PrismSidebar({
       group: "PROJECT",
       items: [
         { label: "Setup & Studio", path: `/p/${projectKey}/setup`, icon: Wrench, badge: "Config", badgeColor: "badge-magenta" },
-        { label: "Environments Matrix", path: `/p/${projectKey}/environments`, icon: Network },
+        { label: "Environment Matrix Studio", path: `/p/${projectKey}/environments`, icon: Network, badge: "Studio", badgeColor: "badge-teal" },
         { label: "Parameter Studio", path: `/p/${projectKey}/parameters`, icon: Sliders },
         { label: "Settings & Instructions", path: `/p/${projectKey}/settings`, icon: Settings },
       ]
@@ -121,12 +129,12 @@ export function PrismSidebar({
       group: "PLATFORM",
       items: [
         { label: "Projects Fleet", path: "/admin/projects", icon: Layers, badge: "Fleet", badgeColor: "badge-teal" },
-        { label: "Add Project", path: "/admin/projects?create=true", icon: Plus, badge: "New", badgeColor: "badge-magenta" },
-        { label: "Developer Docs", path: "/admin/docs", icon: BookOpen, badge: "ADK 2.8", badgeColor: "badge-teal" },
+        { label: "Developer Docs", path: "/admin/docs", icon: BookOpen },
         { label: "Skills", path: "/admin/skills", icon: Cpu },
         { label: "Prompts", path: "/admin/prompts", icon: FileText },
         { label: "Connectors Catalog", path: "/admin/connectors", icon: Server },
-        { label: "Environments", path: "/admin/environments", icon: Network },
+        { label: "Agent Harness & Plugins", path: "/admin/harness", icon: Zap, badge: "Plugins", badgeColor: "badge-purple" },
+        { label: "Harness Configuration", path: "/admin/harness-configuration", icon: Zap },
         { label: "Model Providers", path: "/admin/models", icon: Database },
         { label: "API Keys", path: "/admin/keys", icon: Key },
       ]
@@ -143,13 +151,142 @@ export function PrismSidebar({
     {
       group: "USER MANAGEMENT",
       items: [
+        { label: "Organizations & Teams", path: "/admin/organizations", icon: Users },
         { label: "Users & Access", path: "/admin/users", icon: Users },
         { label: "Security & Policy", path: "/admin/security", icon: ShieldAlert },
       ]
     }
   ];
 
-  const currentNav = isAdmin ? adminNav : projectNav;
+  // General Viewer nav
+  const portalNav = [
+    {
+      group: "PORTAL WORKSPACE",
+      items: [
+        { label: "Portal Hub", path: "/portal", icon: Home, badge: "HOME", badgeColor: "badge-teal" },
+        { label: "System Health", path: "/admin/health", icon: CheckCircle2 },
+        { label: "Developer Docs", path: `/p/${projectKey}/docs`, icon: BookOpen },
+      ]
+    }
+  ];
+
+  // Project Manager: Oversight, SLAs, burndown and reporting (not involved in low-level triage)
+  const pmNav = [
+    {
+      group: "PROJECT OVERSIGHT",
+      items: [
+        { 
+          label: "Live Triage Board", 
+          path: `/p/${projectKey}/board`, 
+          icon: Kanban, 
+          badge: "OVERSEE", 
+          badgeColor: "badge-amber",
+          isLiveGlow: true 
+        },
+        { label: "Overview", path: `/p/${projectKey}/overview`, icon: Home },
+        { label: "Metrics & Telemetry", path: `/p/${projectKey}/metrics`, icon: BarChart3 },
+        { label: "Reports & Digests", path: `/p/${projectKey}/reports`, icon: FileText, badge: "Cadence", badgeColor: "badge-teal" },
+        { label: "SRE Feedback Loop", path: `/p/${projectKey}/feedback`, icon: ThumbsUp },
+      ]
+    },
+    {
+      group: "GOVERNANCE & AUDIT",
+      items: [
+        { label: "Tickets & Incidents", path: `/p/${projectKey}/tickets`, icon: Ticket },
+        { label: "Runs & Timeline", path: `/p/${projectKey}/runs`, icon: PlayCircle },
+        { label: "Knowledge Fabric", path: `/p/${projectKey}/knowledge`, icon: BookOpen },
+      ]
+    }
+  ];
+
+  // Project Viewer: Read-only live triage board, metrics, reports, and interactive chat
+  const viewerNav = [
+    {
+      group: "VIEWER WORKSPACE",
+      items: [
+        { 
+          label: "Live Triage Board", 
+          path: `/p/${projectKey}/board`, 
+          icon: Kanban, 
+          badge: "VIEW ONLY", 
+          badgeColor: "badge-teal",
+          isLiveGlow: true 
+        },
+        { label: "Overview", path: `/p/${projectKey}/overview`, icon: Home },
+        { label: "Investigation Stream", path: `/p/${projectKey}/investigations`, icon: MessageSquare, badge: "CHAT", badgeColor: "badge-magenta" },
+      ]
+    },
+    {
+      group: "INSIGHTS & REPORTS",
+      items: [
+        { label: "Metrics & Analytics", path: `/p/${projectKey}/metrics`, icon: BarChart3 },
+        { label: "Reports & Digests", path: `/p/${projectKey}/reports`, icon: FileText },
+        { label: "Tickets & History", path: `/p/${projectKey}/tickets`, icon: Ticket },
+        { label: "Knowledge Fabric", path: `/p/${projectKey}/knowledge`, icon: BookOpen },
+      ]
+    }
+  ];
+
+  // Project Analyst: Hands-on analysis & triage execution, staging proposals (configs set by owner)
+  const analystNav = [
+    {
+      group: "TRIAGE & MISSION CONTROL",
+      items: [
+        { 
+          label: "Live Triage Board", 
+          path: `/p/${projectKey}/board`, 
+          icon: Kanban, 
+          badge: "LIVE SRE", 
+          badgeColor: "badge-teal",
+          isLiveGlow: true 
+        },
+        { label: "Overview", path: `/p/${projectKey}/overview`, icon: Home },
+        { label: "Auto-Triage Hub", path: `/p/${projectKey}/triage`, icon: Zap, badge: "LIVE" },
+        { label: "Investigation Stream", path: `/p/${projectKey}/investigations`, icon: MessageSquare },
+      ]
+    },
+    {
+      group: "BUILD & TOOLS",
+      items: [
+        { label: "Agents", path: `/p/${projectKey}/agents`, icon: Cpu },
+        { label: "Tools & Connectors", path: `/p/${projectKey}/tools`, icon: Wrench },
+        { label: "Workflows", path: `/p/${projectKey}/workflows`, icon: GitFork },
+        { label: "Artifacts & Skills", path: `/p/${projectKey}/artifacts`, icon: Folder },
+        { label: "Knowledge", path: `/p/${projectKey}/knowledge`, icon: BookOpen },
+      ]
+    },
+    {
+      group: "OPERATIONS",
+      items: [
+        { label: "Tickets & Incidents", path: `/p/${projectKey}/tickets`, icon: Ticket },
+        { label: "Runs & Timeline", path: `/p/${projectKey}/runs`, icon: PlayCircle },
+        { label: "Action Proposals", path: `/p/${projectKey}/actions`, icon: ShieldCheck, badge: "Stage", badgeColor: "badge-teal" },
+      ]
+    },
+    {
+      group: "INSIGHTS & GOVERNANCE",
+      items: [
+        { label: "Metrics & Analytics", path: `/p/${projectKey}/metrics`, icon: BarChart3 },
+        { label: "Reports & Digests", path: `/p/${projectKey}/reports`, icon: FileText, badge: "Cadence", badgeColor: "badge-teal" },
+        { label: "SRE Feedback Loop", path: `/p/${projectKey}/feedback`, icon: ThumbsUp },
+      ]
+    }
+  ];
+
+  let currentNav = projectNav;
+  if (isAdmin) {
+    currentNav = adminNav;
+  } else if (isGeneralViewer) {
+    currentNav = portalNav;
+  } else if (isProjectManager) {
+    currentNav = pmNav;
+  } else if (isProjectViewer) {
+    currentNav = viewerNav;
+  } else if (isProjectAnalyst) {
+    currentNav = analystNav;
+  } else {
+    currentNav = projectNav;
+  }
 
   return (
     <aside 
@@ -200,58 +337,153 @@ export function PrismSidebar({
           }}
           title="Expand Sidebar (⌘B)"
         >
-          <ChevronRight size={15} strokeWidth={2.5} />
+          <ChevronsRight size={14} strokeWidth={2.5} />
           <span className="radar-ping-dot" style={{ position: "absolute", top: "-2px", right: "-2px", width: "7px", height: "7px" }} />
         </button>
       )}
-      {/* Top Brand Area */}
+      {/* Top Brand Area & Sidebar Expander */}
       <div>
         <div 
-          onClick={() => navigate("/")}
           style={{
-            height: "64px",
-            padding: collapsed ? "0 16px" : "0 18px",
+            height: "60px",
+            padding: collapsed ? "0 10px" : "0 12px 0 16px",
             display: "flex",
             alignItems: "center",
-            gap: "12px",
+            justifyContent: collapsed ? "center" : "space-between",
             borderBottom: "1px solid var(--border-subtle)",
-            cursor: "pointer"
+            position: "relative"
           }}
-          title="Return to Sentrix Platform Landing Page"
         >
-          <BrandLogo 
-            size={32} 
-            showText={!collapsed} 
-            isAdmin={isAdmin}
-            subtitle={isAdmin ? "Admin Console" : "Autonomous SRE"}
-          />
+          <div 
+            onClick={() => navigate("/")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              cursor: "pointer",
+              overflow: "hidden"
+            }}
+            title="Return to Sentrix Platform Landing Page"
+          >
+            <BrandLogo 
+              size={collapsed ? 28 : 30} 
+              showText={!collapsed} 
+              isAdmin={isAdmin}
+              subtitle={isAdmin ? "Admin Console" : "Autonomous SRE"}
+            />
+          </div>
+
+          {/* Expander Toggle Button inside the Sidebar */}
+          {!collapsed && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleCollapse();
+              }}
+              style={{
+                width: "28px",
+                height: "28px",
+                borderRadius: "6px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "transparent",
+                border: "none",
+                color: "var(--ink-tertiary)",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+                flexShrink: 0
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "var(--ink-primary)";
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.06)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "var(--ink-tertiary)";
+                e.currentTarget.style.background = "transparent";
+              }}
+              title="Collapse Sidebar (⌘B)"
+            >
+              <ChevronsLeft size={16} />
+            </button>
+          )}
         </div>
 
         {/* View Switcher Pill */}
         {!collapsed && (
           <div style={{ padding: "12px 14px 4px 14px" }}>
-            <button
-              onClick={() => navigate(isAdmin ? `/p/${projectKey}/overview` : "/admin/overview")}
-              className="btn-secondary"
-              style={{
-                width: "100%",
-                padding: "6px 10px",
-                fontSize: "11px",
-                justifyContent: "space-between",
-                background: isAdmin ? "rgba(225, 29, 72, 0.08)" : "rgba(255, 255, 255, 0.03)",
-                borderColor: isAdmin ? "rgba(225, 29, 72, 0.3)" : "var(--border-subtle)"
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <ArrowRightLeft size={13} color={isAdmin ? "var(--prism-pink)" : "var(--accent-teal)"} />
-                <span style={{ color: isAdmin ? "var(--prism-pink)" : "#fff", fontWeight: "600" }}>
-                  {isAdmin ? "Switch to Project" : "Switch to Admin"}
+            {isPlatformAdmin ? (
+              <button
+                onClick={() => navigate(isAdmin ? `/p/${projectKey}/overview` : "/admin/overview")}
+                className="btn-secondary"
+                style={{
+                  width: "100%",
+                  padding: "6px 10px",
+                  fontSize: "11px",
+                  justifyContent: "space-between",
+                  background: isAdmin ? "rgba(225, 29, 72, 0.08)" : "var(--bg-elevated)",
+                  borderColor: isAdmin ? "rgba(225, 29, 72, 0.3)" : "var(--border-subtle)",
+                  color: "var(--ink-primary)",
+                  cursor: "pointer",
+                  transition: "all 0.18s ease"
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <ArrowRightLeft size={13} color={isAdmin ? "var(--prism-pink)" : "var(--accent-teal)"} />
+                  <span style={{ color: isAdmin ? "var(--prism-pink)" : "var(--ink-primary)", fontWeight: "600" }}>
+                    {isAdmin ? "Switch to Project" : "Switch to Admin"}
+                  </span>
+                </div>
+                <span 
+                  className="mono" 
+                  style={{ 
+                    fontSize: "9px", 
+                    fontWeight: "600",
+                    color: isAdmin ? "var(--prism-pink)" : "var(--accent-teal)",
+                    background: isAdmin ? "rgba(225, 29, 72, 0.12)" : "rgba(13, 148, 136, 0.12)",
+                    padding: "2px 6px",
+                    borderRadius: "4px"
+                  }}
+                >
+                  {isAdmin ? projectKey : "SYSTEM"}
+                </span>
+              </button>
+            ) : isGeneralViewer ? (
+              <div
+                style={{
+                  padding: "6px 10px",
+                  borderRadius: "8px",
+                  background: "var(--bg-elevated)",
+                  border: "1px solid var(--border-subtle)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  fontSize: "11px"
+                }}
+              >
+                <span style={{ color: "var(--ink-primary)", fontWeight: 600 }}>Portal Workspace</span>
+                <span className="mono badge badge-slate" style={{ fontSize: "9px" }}>GLOBAL</span>
+              </div>
+            ) : (
+              <div
+                style={{
+                  padding: "6px 10px",
+                  borderRadius: "8px",
+                  background: "var(--bg-elevated)",
+                  border: "1px solid var(--border-subtle)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  fontSize: "11px"
+                }}
+              >
+                <span className={`badge ${currentPersona.badgeClass}`} style={{ fontSize: "9.5px", padding: "1px 6px" }}>
+                  {currentPersona.badgeLabel}
+                </span>
+                <span className="mono" style={{ fontSize: "10px", color: "var(--prism-pink)" }}>
+                  {projectKey}
                 </span>
               </div>
-              <span className="mono" style={{ fontSize: "9px", color: "var(--ink-tertiary)" }}>
-                {isAdmin ? projectKey : "SYSTEM"}
-              </span>
-            </button>
+            )}
           </div>
         )}
 
@@ -279,7 +511,7 @@ export function PrismSidebar({
               <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                 {sec.items.map((item) => {
                   const Icon = item.icon;
-                  const isActive = location.pathname === item.path;
+                  const isActive = location.pathname === item.path || (item.path !== "/admin" && item.path !== "/" && location.pathname.startsWith(item.path + "/"));
                   return (
                     <Link
                       key={item.path}
@@ -350,28 +582,43 @@ export function PrismSidebar({
         {!collapsed ? (
           <>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", overflow: "hidden", minWidth: 0 }}>
-              <div style={{
-                width: "32px",
-                height: "32px",
-                borderRadius: "8px",
-                background: "var(--prism-gradient)",
-                color: "#fff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "12px",
-                fontWeight: "700",
-                flexShrink: 0,
-                boxShadow: "0 0 10px var(--prism-glow)"
-              }}>
-                {isAdmin ? "SA" : "SJ"}
-              </div>
+              {currentPersona.avatar ? (
+                <img
+                  src={currentPersona.avatar}
+                  alt={currentPersona.name}
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    objectFit: "cover",
+                    flexShrink: 0,
+                    boxShadow: "0 0 10px var(--prism-glow)"
+                  }}
+                />
+              ) : (
+                <div style={{
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "8px",
+                  background: "var(--prism-gradient)",
+                  color: "#fff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "12px",
+                  fontWeight: "700",
+                  flexShrink: 0,
+                  boxShadow: "0 0 10px var(--prism-glow)"
+                }}>
+                  {currentPersona.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                </div>
+              )}
               <div style={{ overflow: "hidden", minWidth: 0 }}>
                 <div style={{ fontSize: "12px", fontWeight: "600", color: "var(--ink-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {isAdmin ? "Super Administrator" : "Sarah Jones"}
+                  {currentPersona.name}
                 </div>
                 <div className="mono" style={{ fontSize: "10px", color: "var(--ink-tertiary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {isAdmin ? "admin@sentrix.io" : "kbk@company.com"}
+                  {currentPersona.email}
                 </div>
               </div>
             </div>

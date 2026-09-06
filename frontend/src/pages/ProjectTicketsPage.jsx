@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Ticket,
   Search,
@@ -11,132 +11,32 @@ import {
   Users,
   Shield,
   ArrowUpRight,
-  TrendingUp
+  TrendingUp,
+  RotateCw
 } from "lucide-react";
 import { TicketDetailPanel } from "../components/TicketDetailPanel";
+import { fetchBoardTickets } from "../api/client";
 
 export function ProjectTicketsPage({ activeProject }) {
-  const projectKey = activeProject?.project_key || "BILLING";
+  const projectKey = activeProject?.project_key || "";
   const [searchQuery, setSearchQuery] = useState("");
   const [severityFilter, setSeverityFilter] = useState("ALL");
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [tickets, setTickets] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const tickets = [
-    {
-      id: "1",
-      key: "BILL-1049",
-      title: "Payment gateway timeout on recurring charges",
-      description: "Cascading 504 Gateway Timeouts observed on /v1/webhooks/charges during recurring subscription billing run.",
-      status: "incoming",
-      priority: "P1",
-      confidence: 96,
-      service: "Payment Ledger & Webhooks",
-      assignedTeam: "Payments Core Team",
-      suggestedFixTeam: "Payments Core Team",
-      reporter: "PagerDuty / AlertManager",
-      time: "4m ago",
-      slaCountdown: "26m remaining",
-      autoTriaged: true,
-      triageSummary: "Root Cause: HikariCP connection pool exhausted on billing-db-primary due to unindexed batch lock in /v1/webhooks/charges.",
-      suggestions: [
-        "Increase HikariCP pool limit from 20 to 50 on billing-webhook-worker.",
-        "Apply missing index on billing_transactions(account_id, settlement_status)."
-      ],
-      queries: [
-        {
-          id: "q1",
-          type: "SQL",
-          tool: "PostgreSQL Primary (billing_db)",
-          query: "SELECT datname, count(*), state FROM pg_stat_activity WHERE datname = 'billing_ledger' GROUP BY datname, state;",
-          description: "Inspect active vs idle connections in billing database pool"
-        }
-      ]
-    },
-    {
-      id: "2",
-      key: "AUTH-2091",
-      title: "Auth token signature verification latency spike",
-      description: "Intermittent 401 Unauthorized errors on API gateway. JWKS signature key verification timing out.",
-      status: "auto",
-      priority: "P2",
-      confidence: 88,
-      service: "OAuth2 / IAM Edge",
-      assignedTeam: "Identity & Security Team",
-      suggestedFixTeam: "Identity & Security Team",
-      reporter: "CloudWatch Latency Monitor",
-      time: "12m ago",
-      slaCountdown: "48m remaining",
-      autoTriaged: true,
-      triageSummary: "Root Cause: JWKS certificate cache expiry policy caused simultaneous cache misses across 16 API gateway instances.",
-      suggestions: [
-        "Hot-patch JWKS cache TTL from 60s to 3600s with background refresh-ahead."
-      ],
-      queries: []
-    },
-    {
-      id: "3",
-      key: "DB-3030",
-      title: "Deadlock in orders_allocation lock queue",
-      description: "Lock wait timeout exceeded during high concurrency flash checkout run on order allocation tables.",
-      status: "pending",
-      priority: "P1",
-      confidence: 92,
-      service: "Inventory Fulfillment DB",
-      assignedTeam: "Database Infrastructure Team",
-      suggestedFixTeam: "Database Infrastructure Team",
-      reporter: "SRE On-Call (Sarah K.)",
-      time: "25m ago",
-      slaCountdown: "5m remaining",
-      autoTriaged: true,
-      triageSummary: "Root Cause: Circular row-level lock sequence between order_items and inventory_reservation tables.",
-      suggestions: [
-        "Sort order item IDs deterministically before acquiring SELECT FOR UPDATE locks."
-      ],
-      queries: []
-    },
-    {
-      id: "4",
-      key: "NOTIF-501",
-      title: "Email delivery queue backlog exceeding SLA threshold",
-      description: "SendGrid SMTP relay returned 429 rate limit exceeded; customer transactional emails delayed.",
-      status: "handoff",
-      priority: "P2",
-      confidence: 94,
-      service: "Notification Dispatcher",
-      assignedTeam: "Communications Team",
-      suggestedFixTeam: "Communications Team",
-      reporter: "Datadog Queue Monitor",
-      time: "1h ago",
-      slaCountdown: "SLA Met",
-      autoTriaged: true,
-      triageSummary: "Root Cause: SendGrid subaccount hourly quota reached due to password reset blast.",
-      suggestions: [
-        "Failover notification router to secondary AWS SES provider."
-      ],
-      queries: []
-    },
-    {
-      id: "5",
-      key: "INFRA-880",
-      title: "Redis cluster node failover completed",
-      description: "Node redis-cluster-shard-02-b experienced OOM crash. Sentinel triggered failover to replica.",
-      status: "resolved",
-      priority: "P3",
-      confidence: 99,
-      service: "Session & Cache Grid",
-      assignedTeam: "Core Infrastructure",
-      suggestedFixTeam: "Core Infrastructure",
-      reporter: "K8s OOM Watcher",
-      time: "2h ago",
-      slaCountdown: "Resolved",
-      autoTriaged: true,
-      triageSummary: "Root Cause: Redis maxmemory policy was set to noeviction instead of allkeys-lru.",
-      suggestions: [
-        "Verified: Updated maxmemory-policy to allkeys-lru on Redis ConfigMap."
-      ],
-      queries: []
-    }
-  ];
+  useEffect(() => {
+    setIsLoading(true);
+    fetchBoardTickets(projectKey)
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) setTickets(data);
+        else if (data && !data.error) setTickets(Array.isArray(data) ? data : []);
+      })
+      .catch((err) => console.warn("Failed to load tickets:", err))
+      .finally(() => setIsLoading(false));
+  }, [projectKey]);
+
+
 
   const filteredTickets = tickets.filter((t) => {
     if (severityFilter !== "ALL" && t.priority !== severityFilter) return false;
@@ -289,8 +189,11 @@ export function ProjectTicketsPage({ activeProject }) {
                   <td style={{ padding: "12px 16px" }}>
                     <span className="badge badge-teal" style={{ textTransform: "capitalize" }}>{ticket.status}</span>
                   </td>
-                  <td style={{ padding: "12px 16px", color: ticket.slaCountdown.includes("remaining") ? "var(--accent-amber)" : "var(--accent-teal)", fontWeight: 600 }}>
-                    {ticket.slaCountdown}
+                  <td style={{ padding: "12px 16px", color: (ticket.slaCountdown || "").includes("remaining") ? "var(--accent-amber)" : "var(--accent-teal)", fontWeight: 600 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <Clock size={12} />
+                      <span>{ticket.slaCountdown || (ticket.slaTarget ? `${ticket.slaTarget} target` : "Active")}</span>
+                    </div>
                   </td>
                   <td style={{ padding: "12px 16px", color: "var(--ink-secondary)" }}>
                     {ticket.assignedTeam}

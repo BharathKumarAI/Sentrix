@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FileText,
   Calendar,
@@ -24,10 +24,13 @@ import {
   Activity,
   BarChart2
 } from "lucide-react";
+import { fetchProjectReports } from "../api/client";
 
 export function ProjectReportsPage({ activeProject }) {
-  const projectKey = activeProject?.project_key || "BILLING";
+  const projectKey = activeProject?.project_key || "";
   const [cadence, setCadence] = useState("weekly"); // "daily" | "weekly" | "biweekly" | "monthly"
+  const [currentReport, setCurrentReport] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isCopied, setIsCopied] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailRecipients, setEmailRecipients] = useState("cto@company.com, vp-eng@company.com, sre-lead@company.com");
@@ -38,105 +41,29 @@ export function ProjectReportsPage({ activeProject }) {
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailSentSuccess, setEmailSentSuccess] = useState(false);
 
-  const reportData = {
-    daily: {
-      title: "Daily SRE Incident & Auto-Triage Digest",
-      period: "September 03, 2026 (00:00 - 23:59 UTC)",
-      executiveSummary: "Over the last 24 hours, Sentrix ingested 18 production alerts across the Billing and Core infrastructure. Autonomous triage diagnosed 17 incidents within 38 seconds average, identifying 1 P1 connection pool exhaustion on billing-db-primary.",
-      incidentsSummary: [
-        { key: "BILL-1049", title: "HikariCP connection pool exhausted on /v1/webhooks/charges", sev: "P1", status: "Staged for Review", fixTeam: "Payments Core Team" },
-        { key: "AUTH-2091", title: "JWKS public key verification latency spike on Envoy edge", sev: "P2", status: "Auto-Triaged", fixTeam: "Identity & Security Team" },
-        { key: "DB-3030", title: "Deadlock in orders_allocation lock queue", sev: "P1", status: "Pending Review", fixTeam: "Database Infrastructure Team" }
-      ],
-      kpis: [
-        { label: "Incidents (24h)", value: "18" },
-        { label: "Auto-Triage Rate", value: "94.4%" },
-        { label: "Avg Triage Latency", value: "38s" },
-        { label: "Critical Sev-1s", value: "2" }
-      ],
-      recommendations: [
-        "Increase HikariCP pool limit from 20 to 50 on billing-webhook-worker before upcoming midnight recurring billing cycle.",
-        "Ensure SRE on-call approves Hot-Patch PR #419 under delegated identity.",
-        "Review Envoy edge proxy JWKS cache TTL config on identity cluster."
-      ]
-    },
-    weekly: {
-      title: "Weekly SRE Operational Review & Incident Trends",
-      period: "Week 36 (Aug 28 - Sep 03, 2026)",
-      executiveSummary: "Total incident volume remained stable at 154 alerts (down 12% week-over-week). Mean Time to Acknowledge (MTTA) dropped from 6.2 minutes to 18 seconds via ADK 2.8 autonomous triage. MTTR was reduced by 68% (from 44m to 14.2m).",
-      incidentsSummary: [
-        { key: "BILL-1049", title: "HikariCP connection pool exhausted on recurring charges", sev: "P1", status: "Resolved", fixTeam: "Payments Core Team" },
-        { key: "DB-3030", title: "Deadlock in orders_allocation lock queue", sev: "P1", status: "Resolved", fixTeam: "Database Infrastructure Team" },
-        { key: "NOTIF-501", title: "SendGrid SMTP 429 quota exhaustion; rerouted to AWS SES", sev: "P2", status: "Resolved", fixTeam: "Communications Team" },
-        { key: "INFRA-880", title: "Redis node failover due to OOM; updated maxmemory policy", sev: "P3", status: "Verified Healthy", fixTeam: "Core Infrastructure" }
-      ],
-      kpis: [
-        { label: "Weekly Incidents", value: "154" },
-        { label: "RCA Accuracy", value: "96.4%" },
-        { label: "Mean TTR", value: "14.2m" },
-        { label: "SLA Adherence", value: "99.8%" }
-      ],
-      recommendations: [
-        "Apply missing index on billing_transactions(account_id, settlement_status) to prevent table scan locks under high concurrency.",
-        "Standardize all Redis clusters on allkeys-lru maxmemory-policy via base Helm chart.",
-        "Elevate SendGrid enterprise tier credit quota to accommodate monthly recurring invoice blasts."
-      ]
-    },
-    biweekly: {
-      title: "Bi-Weekly Reliability Brief & Error Budget Burn",
-      period: "Sprint 42 (Aug 21 - Sep 03, 2026)",
-      executiveSummary: "Rolling 14-day error budget burn rate is currently at 14.2% of quarterly allowance, maintaining a healthy green status across all Tier-1 billing microservices. 312 total diagnostic queries were executed by autonomous agents with zero security violations.",
-      incidentsSummary: [
-        { key: "BILL-1020", title: "Stripe webhook idempotency key collision on rapid retries", sev: "P2", status: "Resolved", fixTeam: "Payments Core Team" },
-        { key: "AUTH-2044", title: "Entra ID OIDC token exchange timeout during peak morning login", sev: "P1", status: "Resolved", fixTeam: "Identity & Security Team" },
-        { key: "K8S-701", title: "Worker node pool autoscaler throttled by AWS EC2 quota", sev: "P2", status: "Resolved", fixTeam: "Core Infrastructure" }
-      ],
-      kpis: [
-        { label: "Error Budget Burn", value: "14.2%" },
-        { label: "Total Ingested", value: "312" },
-        { label: "Auto-Remediated", value: "42.1%" },
-        { label: "SLO Margin", value: "+0.18%" }
-      ],
-      recommendations: [
-        "Upgrade EKS cluster to v1.31 and enable automated pod disruption budgets across worker nodes.",
-        "Introduce circuit breaker fallbacks on all external payment gateway webhook endpoints.",
-        "Implement periodic database vacuuming schedule on order fulfillment partition tables."
-      ]
-    },
-    monthly: {
-      title: "Monthly Executive Board & Reliability Post-Mortem",
-      period: "August 01 - August 31, 2026",
-      executiveSummary: "In August 2026, Sentrix achieved 99.98% platform availability for the Global Billing & Payments service. Autonomous triage prevented an estimated 14.6 hours of cumulative production downtime, yielding an estimated $148,000 in saved developer on-call hours and SLA violation credits.",
-      incidentsSummary: [
-        { key: "INC-AUG-01", title: "Primary PostgreSQL read-replica lag exceeded 15s during monthly close", sev: "P1", status: "Post-Mortem Published", fixTeam: "Database Infrastructure Team" },
-        { key: "INC-AUG-02", title: "Stripe API TLS handshake termination on edge proxy fleet", sev: "P1", status: "Post-Mortem Published", fixTeam: "Payments Core Team" },
-        { key: "INC-AUG-03", title: "Kafka consumer rebalance storm across payment notification topic", sev: "P2", status: "Post-Mortem Published", fixTeam: "Communications Team" }
-      ],
-      kpis: [
-        { label: "Availability", value: "99.98%" },
-        { label: "Downtime Prevented", value: "14.6 hrs" },
-        { label: "Cost Savings", value: "$148,000" },
-        { label: "MTTR Compression", value: "-68%" }
-      ],
-      recommendations: [
-        "Commission dedicated read-replica pool for automated data warehouse batch reporting.",
-        "Transition all microservices to HTTP/2 multiplexed connections for external partner APIs.",
-        "Establish monthly architectural review for recurring database contention hotspots."
-      ]
-    }
-  };
-
-  const currentReport = reportData[cadence];
+  useEffect(() => {
+    setIsLoading(true);
+    fetchProjectReports(projectKey, cadence)
+      .then((data) => {
+        if (data && !data.error) {
+          setCurrentReport(data);
+        }
+      })
+      .catch((err) => console.warn("Failed to load reports:", err))
+      .finally(() => setIsLoading(false));
+  }, [projectKey, cadence]);
 
   const handleCopyMarkdown = () => {
-    const text = `# ${currentReport.title}\n**Period:** ${currentReport.period}\n\n## Executive Summary\n${currentReport.executiveSummary}\n\n## Key Operational KPIs\n${currentReport.kpis.map((k) => `- **${k.label}:** ${k.value}`).join("\n")}\n\n## Preventative Recommendations\n${currentReport.recommendations.map((r, i) => `${i + 1}. ${r}`).join("\n")}`;
+    if (!currentReport) return;
+    const text = `# ${currentReport.title || "Report"}\n**Period:** ${currentReport.period || "N/A"}\n\n## Executive Summary\n${currentReport.executiveSummary || ""}\n\n## Key Operational KPIs\n${(currentReport.kpis || []).map((k) => `- **${k.label}:** ${k.value}`).join("\n")}\n\n## Preventative Recommendations\n${(currentReport.recommendations || []).map((r, i) => `${i + 1}. ${r}`).join("\n")}`;
     navigator.clipboard.writeText(text);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
   };
 
   const handleOpenEmailModal = () => {
-    setEmailSubject(`[Executive SRE Brief] ${currentReport.title} - ${projectKey} (${currentReport.period})`);
+    if (!currentReport) return;
+    setEmailSubject(`[Executive SRE Brief] ${currentReport.title || "Report"} - ${projectKey} (${currentReport.period || ""})`);
     setEmailSentSuccess(false);
     setShowEmailModal(true);
   };
@@ -251,11 +178,19 @@ export function ProjectReportsPage({ activeProject }) {
         </div>
       </div>
 
-      {/* Action Bar */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", color: "var(--ink-tertiary)" }}>
-          <Calendar size={14} /> Active Period: <strong style={{ color: "var(--ink-primary)" }}>{currentReport.period}</strong>
+      {isLoading || !currentReport ? (
+        <div className="prism-card" style={{ padding: "80px 20px", textAlign: "center", color: "var(--ink-secondary)" }}>
+          <RotateCw className="spin" size={26} style={{ margin: "0 auto 12px auto", color: "var(--prism-pink)" }} />
+          <div style={{ fontSize: "14px", fontWeight: 600 }}>Aggregating operational reliability metrics for {projectKey}...</div>
+          <div style={{ fontSize: "12px", color: "var(--ink-tertiary)", marginTop: "4px" }}>Synthesizing active telemetry, error budgets, and triage accuracy</div>
         </div>
+      ) : (
+        <>
+          {/* Action Bar */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", color: "var(--ink-tertiary)" }}>
+              <Calendar size={14} /> Active Period: <strong style={{ color: "var(--ink-primary)" }}>{currentReport.period}</strong>
+            </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <button
@@ -312,7 +247,7 @@ export function ProjectReportsPage({ activeProject }) {
 
         {/* KPI Grid */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
-          {currentReport.kpis.map((kpi, idx) => (
+          {(currentReport.kpis || []).map((kpi, idx) => (
             <div
               key={idx}
               style={{
@@ -348,7 +283,7 @@ export function ProjectReportsPage({ activeProject }) {
               2. Autonomous Triage & Agent Performance Analytics
             </h3>
             <span className="mono badge badge-teal" style={{ fontSize: "10px" }}>
-              ADK 2.8 Autonomous Engine
+              Google ADK Autonomous Engine
             </span>
           </div>
 
@@ -462,7 +397,7 @@ export function ProjectReportsPage({ activeProject }) {
                 { cycle: "Cycle 3 (2w ago)", mtta: "45 sec", mttr: "19.1m", sla: "99.95%", pct: 18, color: "var(--accent-violet)" },
                 { cycle: "Cycle 4 (Current)", mtta: "18 sec", mttr: "14.2m", sla: "99.98%", pct: 7, color: "var(--accent-teal)" }
               ].map((c) => (
-                <div key={c.cycle} style={{ display: "flex", flexDirection: "column", gap: "8px", padding: "12px", background: "rgba(0,0,0,0.25)", borderRadius: "6px" }}>
+                <div key={c.cycle} style={{ display: "flex", flexDirection: "column", gap: "8px", padding: "12px", background: "var(--bg-app)", border: "1px solid var(--border-subtle)", borderRadius: "8px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--ink-primary)" }}>{c.cycle}</span>
                     <span className="badge badge-teal" style={{ fontSize: "9px" }}>{c.sla}</span>
@@ -473,12 +408,12 @@ export function ProjectReportsPage({ activeProject }) {
                     <span style={{ fontSize: "10px", color: "var(--ink-tertiary)" }}>MTTA</span>
                   </div>
 
-                  <div style={{ width: "100%", height: "6px", background: "rgba(255,255,255,0.06)", borderRadius: "3px", overflow: "hidden" }}>
+                  <div style={{ width: "100%", height: "6px", background: "var(--border-subtle)", borderRadius: "3px", overflow: "hidden" }}>
                     <div style={{ width: `${c.pct}%`, height: "100%", background: c.color, borderRadius: "3px" }} />
                   </div>
 
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10.5px", color: "var(--ink-secondary)" }}>
-                    <span>MTTR: <strong style={{ color: "#fff" }}>{c.mttr}</strong></span>
+                    <span>MTTR: <strong style={{ color: "var(--ink-primary)" }}>{c.mttr}</strong></span>
                   </div>
                 </div>
               ))}
@@ -503,7 +438,7 @@ export function ProjectReportsPage({ activeProject }) {
                 </tr>
               </thead>
               <tbody>
-                {currentReport.incidentsSummary.map((inc) => (
+                {(currentReport.incidentsSummary || []).map((inc) => (
                   <tr key={inc.key} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
                     <td style={{ padding: "12px 14px", fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: "var(--prism-pink)" }}>
                       {inc.key}
@@ -529,7 +464,7 @@ export function ProjectReportsPage({ activeProject }) {
             5. Actionable Preventative Recommendations
           </h3>
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {currentReport.recommendations.map((rec, idx) => (
+            {(currentReport.recommendations || []).map((rec, idx) => (
               <div
                 key={idx}
                 style={{
@@ -550,6 +485,8 @@ export function ProjectReportsPage({ activeProject }) {
           </div>
         </div>
       </div>
+      </>
+      )}
 
       {/* 6. Executive Email Dispatcher Modal */}
       {showEmailModal && (

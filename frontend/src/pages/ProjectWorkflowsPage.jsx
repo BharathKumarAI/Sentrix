@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   GitFork,
   Play,
@@ -16,80 +16,27 @@ import {
   ChevronRight,
   Plus
 } from "lucide-react";
+import { fetchProjectRuns } from "../api/client";
 
 export function ProjectWorkflowsPage({ activeProject }) {
-  const projectKey = activeProject?.project_key || "BILLING";
+  const projectKey = activeProject?.project_key || "";
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedWorkflow, setSelectedWorkflow] = useState(null);
   const [executingWorkflowId, setExecutingWorkflowId] = useState(null);
+  const [runs, setRuns] = useState([]);
 
-  const workflows = [
-    {
-      id: "wf-01",
-      name: "Recurring Subscription Timeout Triage (P1 Pipeline)",
-      trigger: "Webhook HTTP 504 Threshold (>5% over 2m)",
-      status: "ACTIVE",
-      runsTotal: 418,
-      successRate: "97.4%",
-      avgDuration: "34s",
-      lastRun: "4m ago",
-      steps: [
-        { name: "Alert Ingestion", type: "TRIGGER", detail: "PagerDuty webhook parsed into normalized RunContext" },
-        { name: "DB Pool Inspection", type: "TOOL_CALL", detail: "PostgreSQL pg_stat_activity query executed" },
-        { name: "Root Cause Synthesis", type: "AI_REASONING", detail: "Correlate HikariCP pool starvation with billing renewal batch" },
-        { name: "Write-Lock Approval", type: "GOVERNANCE", detail: "ActionProposal generated requiring delegated identity authorization" },
-        { name: "Application Handoff", type: "INTEGRATION", detail: "Post triage findings to Jira BILL-1049 & assign Payments Core" }
-      ]
-    },
-    {
-      id: "wf-02",
-      name: "Database Deadlock Auto-Detection & Isolation",
-      trigger: "pg_stat_activity blocked_locks detected",
-      status: "ACTIVE",
-      runsTotal: 290,
-      successRate: "98.9%",
-      avgDuration: "28s",
-      lastRun: "25m ago",
-      steps: [
-        { name: "Lock Queue Alarm", type: "TRIGGER", detail: "PostgreSQL lock wait threshold exceeded 10s" },
-        { name: "Graph Cycle Traversal", type: "TOOL_CALL", detail: "Identify circular locks between orders and order_items" },
-        { name: "Session Termination Proposal", type: "GOVERNANCE", detail: "Cryptographic proposal to kill blocking PID 10482" },
-        { name: "Verification Trace", type: "TELEMETRY", detail: "Verify transaction rate returns to healthy baseline" }
-      ]
-    },
-    {
-      id: "wf-03",
-      name: "Auth JWKS Thundering Herd Mitigator",
-      trigger: "Envoy Edge Proxy HTTP 401 Spikes (>100 req/s)",
-      status: "ACTIVE",
-      runsTotal: 154,
-      successRate: "95.2%",
-      avgDuration: "42s",
-      lastRun: "1h ago",
-      steps: [
-        { name: "Envoy Metrics Ingestion", type: "TRIGGER", detail: "JWKS cache miss spike detected across 16 proxies" },
-        { name: "Internal Keystore Probe", type: "TOOL_CALL", detail: "Curl probe to internal identity provider endpoint" },
-        { name: "Cache TTL Hotfix", type: "GOVERNANCE", detail: "Propose ConfigMap bump to 3600s with refresh-ahead" },
-        { name: "Dispatch Security Squad", type: "INTEGRATION", detail: "Notify Identity & Security Team on-call" }
-      ]
-    },
-    {
-      id: "wf-04",
-      name: "Kubernetes Worker Pod OOM Auto-Healer",
-      trigger: "K8s Pod ExitCode 137 (OOMKilled)",
-      status: "ACTIVE",
-      runsTotal: 88,
-      successRate: "99.1%",
-      avgDuration: "50s",
-      lastRun: "3h ago",
-      steps: [
-        { name: "OOM Sentinel Hook", type: "TRIGGER", detail: "Container crashloop event caught by cluster operator" },
-        { name: "Heap Profile Analysis", type: "AI_REASONING", detail: "Identify memory peak exceeding 2.1Gi container limit" },
-        { name: "Resource Quota Adjustment", type: "GOVERNANCE", detail: "Stage Helm values update with 3.5Gi limit" },
-        { name: "Safe Rolling Restart", type: "EXECUTION", detail: "Rolling update with zero service downtime" }
-      ]
-    }
-  ];
+  useEffect(() => {
+    if (!activeProject?.id) return;
+    fetchProjectRuns(activeProject.id)
+      .then(data => {
+        if (Array.isArray(data)) setRuns(data);
+      })
+      .catch(err => console.warn("Failed to load workflow runs", err));
+  }, [activeProject?.id]);
+
+  const defaultWorkflows = [];
+
+  const workflows = defaultWorkflows;
 
   const handleExecuteWorkflow = (wfId) => {
     setExecutingWorkflowId(wfId);

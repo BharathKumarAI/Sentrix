@@ -10,6 +10,7 @@ import {
   Copy,
   CheckCheck
 } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 export function ActionProposalCard({
   proposal,
@@ -17,6 +18,8 @@ export function ActionProposalCard({
   onApprove,
   onReject
 }) {
+  const { hasCapability } = useAuth();
+  const canApprove = hasCapability("actions:approve_write_lock");
   const [isAuthorizing, setIsAuthorizing] = useState(false);
   const [isExecuted, setIsExecuted] = useState(proposal.status === "EXECUTED");
   const [copiedHash, setCopiedHash] = useState(false);
@@ -97,14 +100,14 @@ export function ActionProposalCard({
             <FileDiff size={12} /> Payload Diff Preview
           </div>
           <pre className="mono" style={{
-            background: "rgba(0, 0, 0, 0.45)",
+            background: "var(--bg-app)",
             padding: "12px",
             borderRadius: "var(--radius-sm)",
             fontSize: "11px",
             lineHeight: "1.5",
-            color: "#4ee6c7",
+            color: "var(--accent-teal)",
             overflowX: "auto",
-            border: "1px solid rgba(255, 255, 255, 0.08)"
+            border: "1px solid var(--border-subtle)"
           }}>
             {proposal.diff_preview}
           </pre>
@@ -139,19 +142,30 @@ export function ActionProposalCard({
                 <X size={14} /> Reject Proposal
               </button>
               
-              <button
-                className={isHighImpact ? "btn-primary" : "btn-teal"}
-                onClick={handleAuthorize}
-                disabled={isAuthorizing}
-                style={{
-                  background: isHighImpact 
-                    ? "linear-gradient(135deg, #ff7ab6 0%, #8b7dff 100%)" 
-                    : undefined
-                }}
-              >
-                <ShieldCheck size={15} /> 
-                {isAuthorizing ? "Authorizing..." : "Authorize & Execute Write"}
-              </button>
+              {canApprove ? (
+                <button
+                  className={isHighImpact ? "btn-primary" : "btn-teal"}
+                  onClick={handleAuthorize}
+                  disabled={isAuthorizing}
+                  style={{
+                    background: isHighImpact 
+                      ? "linear-gradient(135deg, #ff7ab6 0%, #8b7dff 100%)" 
+                      : undefined
+                  }}
+                >
+                  <ShieldCheck size={15} /> 
+                  {isAuthorizing ? "Authorizing..." : "Authorize & Execute Write"}
+                </button>
+              ) : (
+                <button
+                  className="btn-secondary"
+                  disabled={true}
+                  title="Authorizing high-impact action proposals is restricted to Project Owner and Platform Admin"
+                  style={{ opacity: 0.65, cursor: "not-allowed", gap: "6px" }}
+                >
+                  <Lock size={13} /> Requires Project Owner Write-Lock
+                </button>
+              )}
             </>
           )}
         </div>

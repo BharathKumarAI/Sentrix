@@ -16,6 +16,7 @@ from backend.connectors.base import (
     ExecutionContext,
     NormalizedEvidence,
 )
+from backend.azure.blob_storage import blob_storage_service
 from backend.connectors.registry import ConnectorRegistry
 from backend.database.connection import get_async_db
 from backend.database.models import ActionProposal, EvidenceItem, ToolCallRecord
@@ -102,6 +103,18 @@ class ToolBroker:
                 )
                 tc_record.row_hash = tc_record.calculate_row_hash({"id": tc_record.id, "op": operation})
                 db.add(tc_record)
+
+            # Persist artifact to Azure Blob Storage / local storage mirror
+            try:
+                await blob_storage_service.upload_blob(
+                    container="evidence-bundles",
+                    blob_name=f"{self.run_id}/{evidence.id}.json",
+                    data=json.dumps(evidence.raw_payload),
+                    content_type="application/json",
+                    metadata={"source": evidence.source_system, "run_id": self.run_id}
+                )
+            except Exception as e:
+                logger.debug(f"[ToolBroker] Blob storage upload deferred: {e}")
 
             return {
                 "status": "SUCCESS",

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   PlayCircle,
   Search,
@@ -15,108 +15,24 @@ import {
   Eye,
   AlertTriangle
 } from "lucide-react";
+import { fetchProjectRuns } from "../api/client";
 
 export function ProjectRunsPage({ activeProject }) {
-  const projectKey = activeProject?.project_key || "BILLING";
+  const projectId = activeProject?.id;
+  const projectKey = activeProject?.project_key || "";
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRun, setSelectedRun] = useState(null);
+  const [runs, setRuns] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const runs = [
-    {
-      id: "run_9a82bc1049",
-      ticketKey: "BILL-1049",
-      incident: "Stripe Webhook 504 Timeout Surge",
-      status: "AWAITING_APPROVAL",
-      agent: "Billing Triage Agent",
-      model: "Gemini 2.5 Pro",
-      duration: "1.24s",
-      tokens: 1420,
-      toolCalls: 3,
-      sha256: "8f3b20c9a28114f2e7b1a92bc7190...d82a",
-      timestamp: "4m ago",
-      steps: [
-        "Ingested alert telemetry from /v1/webhooks/charges",
-        "Invoked Tool Broker: PostgreSQL (billing_db)::pg_stat_activity",
-        "Invoked Tool Broker: Datadog::search_error_logs",
-        "Correlated HikariCP connection pool limit 20/20",
-        "Generated ActionProposal #PROP-904 with cryptographic write lock"
-      ]
-    },
-    {
-      id: "run_7c11de2091",
-      ticketKey: "AUTH-2091",
-      incident: "JWKS Signature Verification Latency",
-      status: "EXECUTED",
-      agent: "Auth & IAM Edge Sentinel",
-      model: "GPT-4o",
-      duration: "0.98s",
-      tokens: 980,
-      toolCalls: 2,
-      sha256: "3c91aa8910482910fae8291047192...b109",
-      timestamp: "12m ago",
-      steps: [
-        "Parsed Envoy edge proxy 401 response metrics",
-        "Invoked Tool Broker: Elasticsearch::fetch_jwks_timeouts",
-        "Identified thundering herd keystore expiry storm",
-        "Prepared and hot-patched ConfigMap JWKS cache TTL to 3600s"
-      ]
-    },
-    {
-      id: "run_5e40aa3030",
-      ticketKey: "DB-3030",
-      incident: "PostgreSQL Deadlock in orders_allocation",
-      status: "EXECUTED",
-      agent: "Database Lock Analyzer",
-      model: "Claude 3.5 Sonnet",
-      duration: "1.42s",
-      tokens: 1820,
-      toolCalls: 2,
-      sha256: "5f8290192a7182901a88290184910...e991",
-      timestamp: "25m ago",
-      steps: [
-        "Traversed pg_catalog.pg_locks cycle dependency graph",
-        "Identified blocking session PID 10482 and blocked session 10512",
-        "Authorized session termination under delegated identity",
-        "Verified transaction throughput normalized"
-      ]
-    },
-    {
-      id: "run_4b19cc0501",
-      ticketKey: "NOTIF-501",
-      incident: "SendGrid SMTP 429 Quota Exhaustion",
-      status: "EXECUTED",
-      agent: "Notification Queue Balancer",
-      model: "Claude 3.5 Haiku",
-      duration: "1.10s",
-      tokens: 1120,
-      toolCalls: 3,
-      sha256: "91a82910fa892019482910fa82910...a418",
-      timestamp: "1h ago",
-      steps: [
-        "Measured Redis queue backlog depth (4,200 pending emails)",
-        "Executed failover router to secondary AWS SES provider",
-        "Confirmed queue drain rate stabilized at 450 emails/sec"
-      ]
-    },
-    {
-      id: "run_2a01dd0880",
-      ticketKey: "INFRA-880",
-      incident: "Redis Cluster Node OOM Failover",
-      status: "EXECUTED",
-      agent: "Kubernetes Cluster Auto-Healer",
-      model: "Gemini 2.5 Flash",
-      duration: "0.84s",
-      tokens: 760,
-      toolCalls: 2,
-      sha256: "44a92019482910fa892019482910f...f011",
-      timestamp: "2h ago",
-      steps: [
-        "Caught Sentinel failover event log",
-        "Updated ConfigMap maxmemory-policy to allkeys-lru",
-        "Ran telemetry health probe for 60m with zero error regressions"
-      ]
-    }
-  ];
+  useEffect(() => {
+    if (!projectId) return;
+    setIsLoading(true);
+    fetchProjectRuns(projectId)
+      .then((data) => setRuns(Array.isArray(data) ? data : []))
+      .catch((err) => console.warn("Failed to load runs:", err))
+      .finally(() => setIsLoading(false));
+  }, [projectId]);
 
   const filteredRuns = runs.filter((r) => {
     if (searchQuery.trim()) {
@@ -180,7 +96,7 @@ export function ProjectRunsPage({ activeProject }) {
                 {projectKey} • OPERATIONS
               </span>
               <span className="badge badge-teal">Immutable Run History</span>
-              <span className="badge badge-magenta">ADK 2.8 State Machine</span>
+              <span className="badge badge-magenta">Autonomous State Machine</span>
             </div>
             <h1 style={{ fontSize: "20px", fontWeight: 700, color: "var(--ink-primary)", marginTop: "4px" }}>
               Investigation Runs & Timeline Explorer

@@ -1,5 +1,5 @@
 """
-PostgreSQL-Backed Long-Term Memory Service for PRISM using Google ADK 2.8.0.
+PostgreSQL-Backed Long-Term Memory Service for PRISM using Google ADK.
 Extends BaseMemoryService to store project-level operational context, past triage notes,
 and user preferences across multi-turn sessions.
 """

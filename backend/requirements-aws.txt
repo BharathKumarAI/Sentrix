@@ -1,0 +1,4 @@
+# Sentrix Cloud Extras: Amazon Web Services (S3, Secrets Manager, CloudWatch via Boto3)
+-r requirements.txt
+boto3>=1.34.0
+botocore>=1.34.0

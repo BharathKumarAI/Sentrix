@@ -6,57 +6,141 @@
 [![Backend](https://img.shields.io/badge/Backend-FastAPI_+_SQLAlchemy-10b981?style=flat-square)](https://fastapi.tiangolo.com/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue?style=flat-square)](LICENSE)
 
-**Sentrix** is an enterprise-grade autonomous Site Reliability Engineering (SRE) platform. It orchestrates real-time incident triage, root cause deconstruction, tool broker mediation, and cryptographic remediation proposal governance across distributed multi-cloud services.
+**Sentrix** is an enterprise-grade autonomous Site Reliability Engineering (SRE) and multi-tenant incident governance platform. It orchestrates real-time incident triage, root cause deconstruction, tool broker mediation, and cryptographic remediation proposal governance across distributed multi-cloud services.
 
 ---
 
 ## 🏗️ Architecture Overview
 
-```
-                          ┌─────────────────────────────────────┐
-                          │   Jira Cloud / ServiceNow Polling   │
-                          └──────────────────┬──────────────────┘
-                                             │ Webhook / 30s Poll
-                                             ▼
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                               SENTRIX CONTROL PLANE                                    │
-│                                                                                        │
-│  ┌─────────────────────────┐   ┌──────────────────────────┐   ┌─────────────────────┐  │
-│  │   Auto-Triage Hub &     │   │   OKF v2.0 Knowledge     │   │  Multi-Tenant Fleet │  │
-│  │   Live Incident Desk    │◄─►│   Fabric (Vector/Preced) │◄─►│  Setup Studio       │  │
-│  └────────────┬────────────┘   └──────────────────────────┘   └─────────────────────┘  │
-│               │                                                                        │
-│               ▼                                                                        │
-│  ┌────────────────────────────────────────────────────────┐                            │
-│  │   ADK 2.8 Autonomous SRE Engine (Gemini 2.5 Pro)       │                            │
-│  └────────────────────────────┬───────────────────────────┘                            │
-│                               │ Guarded Tools Ingestion                                │
-│                               ▼                                                        │
-│  ┌────────────────────────────────────────────────────────┐                            │
-│  │   Tool Broker & Environment Resolver Matrix            │                            │
-│  └───────┬────────────────────┬────────────────────┬──────┘                            │
-└──────────┼────────────────────┼────────────────────┼───────────────────────────────────┘
-           │                    │                    │
-           ▼                    ▼                    ▼
-   ┌───────────────┐    ┌───────────────┐    ┌───────────────┐
-   │ PostgreSQL DB │    │ Datadog / APM │    │ Kubernetes    │
-   │ Read Replica  │    │ Metric Stream │    │ Pod Operator  │
-   └───────────────┘    └───────────────┘    └───────────────┘
+Sentrix operates across a **4-Plane Model** (Experience, Control, Runtime, and Integration/Data) designed to keep agent reasoning strictly advisory while enforcing human-in-the-loop authorization on all infrastructure mutations.
+
+```mermaid
+graph TB
+    subgraph External["External Monitoring & Ticketing"]
+        JIRA["Jira Cloud (JQL Multi-Queue)"]
+        SNOW["ServiceNow (sn_incident CMDB)"]
+        ALERTS["APM Webhooks (Datadog/Prometheus)"]
+    end
+
+    subgraph ExperiencePlane["1. Experience Plane (React 19 + Vite 8)"]
+        BOARD["Live Triage Kanban Board<br/>(Pulsing Radar Beacon)"]
+        STREAM["Investigation Stream<br/>(SSE Real-Time Milestones)"]
+        STUDIO["Setup Studio & Environment Conduits"]
+        ADMIN["Enterprise Admin Console<br/>(Health, Billing, Security)"]
+    end
+
+    subgraph ControlPlane["2. Control Plane (FastAPI + PostgreSQL)"]
+        REGISTRY["Project Registry & Tenant Store"]
+        RESOLVER["Dynamic Environment Resolver Matrix"]
+        OKF["OKF v2.0 Knowledge Fabric<br/>(Embeddings & Runbooks)"]
+        AUTHZ["RBAC & Zero-Trust Secret Vault"]
+    end
+
+    subgraph RuntimePlane["3. Runtime Plane (Google ADK 2.8 + DeepSeek Harness)"]
+        HARNESS["Agent Harness Microkernel<br/>('Everything is a Plugin')"]
+        ROUTER["Multi-Model Stage Router<br/>(Gemini 2.5 Pro / Claude / DeepSeek)"]
+        BROKER["Guarded Tool Broker<br/>(Read-Only Enforcer & PII Redactor)"]
+        PROPOSALS["Cryptographic Action Proposals<br/>(Human-in-the-loop Gate)"]
+    end
+
+    subgraph DataPlane["4. Integration & Data Plane (Enterprise Connectors)"]
+        DB["PostgreSQL / Oracle / MySQL<br/>(Read-Only Diagnostic Views)"]
+        APM["Datadog / Splunk / Prometheus<br/>(Metric & Log Streaming)"]
+        K8S["Kubernetes Pod Operator<br/>(Diagnostic Probes)"]
+        GIT["GitLab / GitHub MR Stager<br/>(Automated Code Diffs)"]
+        MCP["Model Context Protocol (MCP)<br/>(Dynamic Tool Servers)"]
+    end
+
+    JIRA -->|30s Poll / Webhook| REGISTRY
+    SNOW -->|CMDB Poll| REGISTRY
+    ALERTS -->|Webhook| REGISTRY
+
+    BOARD <-->|REST / SSE| HARNESS
+    STREAM <-->|Live Telemetry SSE| HARNESS
+    ADMIN -->|Config & Policies| REGISTRY
+    STUDIO -->|Conduit Mapping| RESOLVER
+
+    REGISTRY --> HARNESS
+    RESOLVER --> BROKER
+    OKF --> HARNESS
+    AUTHZ --> BROKER
+
+    HARNESS --> ROUTER
+    ROUTER --> BROKER
+    BROKER -->|Read Queries| DB
+    BROKER -->|Log Searches| APM
+    BROKER -->|Pod Status| K8S
+    BROKER -->|Dynamic Tools| MCP
+
+    BROKER -.->|Mutating Action Intercept| PROPOSALS
+    PROPOSALS -->|Human Approval Required| BOARD
+    PROPOSALS -->|Staged Diff| GIT
 ```
 
 ---
 
-## ⚡ Quick Start: How to Initiate the Project
+## 🔄 End-to-End Incident Lifecycle
 
-### 1. System Requirements
-- **Node.js**: `v18.0.0` or higher (`v20+` recommended)
+When an incident hits production, Sentrix orchestrates the entire diagnostic and remediation process through seven deterministic stages:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Engineer as SRE Engineer
+    participant Ingestion as Ingestion Service
+    participant Classifier as Request Classifier
+    participant Harness as DeepSeek Harness
+    participant Broker as Guarded Tool Broker
+    participant Infra as External Telemetry (DB/APM/K8s)
+    participant RCA as RCA Synthesis Engine
+    participant Proposal as Action Proposals
+
+    Note over Ingestion: 1. Trigger
+    Ingestion->>Classifier: Ingest Jira ticket / ServiceNow alert (e.g. BILL-1049)
+    Note over Classifier: 2. 4D Classification
+    Classifier->>Harness: Resolve Intent, Scope, Read Mode, and Risk Tier
+    
+    Note over Harness,Broker: 3. Autonomous Diagnostic Investigation
+    loop Live Telemetry Extraction
+        Harness->>Broker: Dispatch read-only probe
+        Broker->>Infra: Execute diagnostic query (PostgreSQL pool, APM logs)
+        Infra-->>Broker: Telemetry payload
+        Broker-->>Harness: Sanitized result (PII redacted)
+        Harness-->>Engineer: Stream milestone SSE (Progress Shimmer + Telemetry Peeks)
+    end
+
+    Note over Harness,RCA: 4. Topological RCA Deconstruction
+    Harness->>RCA: Synthesize Fault DAG & bottleneck
+    RCA-->>Engineer: Render Service Flow DAG & Executive Summary
+
+    Note over Broker,Proposal: 5. Governed Action Staging
+    Harness->>Proposal: Stage remediation (e.g. Tune pool size + GitLab MR)
+    Proposal-->>Engineer: Display ActionApprovalCard (Zero write without approval)
+
+    Note over Engineer,Proposal: 6. Human-in-the-Loop Authorization
+    Engineer->>Proposal: Sign & Approve with cryptographic credentials
+    Proposal->>Broker: Execute authorized modification
+
+    Note over Broker,Harness: 7. Verification & Knowledge Ingestion
+    Broker->>Infra: Run synthetic assertions (P99 latency, error rate)
+    Infra-->>Harness: Confirmation metrics
+    Harness-->>Engineer: Mark incident Resolved & Verified
+    Harness->>Harness: Vectorize incident findings into OKF v2.0
+```
+
+---
+
+## ⚡ Quick Start: How to Run the Platform
+
+### System Requirements
+- **Node.js**: `v18.0.0+` (`v20+` recommended)
 - **Python**: `3.10` or `3.11`
-- **Git**: installed and configured
+- **Git**: Installed and configured
+- **Database**: SQLite (default out-of-the-box) or PostgreSQL (production)
 
 ---
 
-### 2. Clone and Setup Environment
-
+### Step 1: Clone Repository
 ```bash
 git clone <repository-url>
 cd Prism
@@ -64,107 +148,132 @@ cd Prism
 
 ---
 
-### 3. Backend Setup & Initiation
-
-The backend is built with FastAPI, SQLite / PostgreSQL, and async SQLAlchemy.
+### Step 2: Backend Setup & Launch
+The backend is built with FastAPI, SQLite/PostgreSQL, Google ADK 2.8, and async SQLAlchemy.
 
 ```bash
-# Navigate to backend directory
 cd backend
 
-# Create and activate a Python virtual environment
+# Create and activate virtual environment
 python3 -m venv venv
 source venv/bin/activate       # On Windows: venv\Scripts\activate
 
-# Install dependencies
-pip install -r requirements.txt
+# Install base dependencies (or tailored to your target cloud):
+pip install -r requirements.txt            # Core Platform (Local / SQLite / Postgres)
+# Or install based on target cloud:
+# pip install -r requirements-azure.txt   # Microsoft Azure (Blob Storage, Key Vault, Identity)
+# pip install -r requirements-gcp.txt     # Google Cloud Platform (GCS, Secret Manager, Trace)
+# pip install -r requirements-aws.txt     # Amazon Web Services (S3, Secrets Manager via Boto3)
+# pip install -r requirements-k8s.txt     # Kubernetes Cluster Pod Operator
+# pip install -r requirements-all.txt     # All clouds combined
 
-# Run the FastAPI backend server
-uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+# Or from project root with npm:
+# npm run setup:azure  /  npm run setup:gcp  /  npm run setup:aws  /  npm run setup:all
+
+# (Optional) Initialize schema and seed RBAC roles
+python -m database.schema
+python -m database.seed_data --apply
+
+# Run FastAPI ASGI server with auto-reload
+python main.py
+# Or directly via Uvicorn:
+# uvicorn server:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-> **Backend Health Check:**  
-> Verify backend is running by opening: `http://localhost:8000/docs` (Swagger UI) or `http://localhost:8000/health`.
+> **Backend Health Verification:**  
+> Verify backend health at: `http://localhost:8000/health` or open Swagger UI at `http://localhost:8000/docs`.
 
 ---
 
-### 4. Frontend Setup & Initiation
-
-The user interface is powered by React 19, Vite 8, and dynamic dark/light telemetry styling.
+### Step 3: Frontend Setup & Launch
+The frontend is powered by React 19, Vite 8, and a bespoke high-contrast telemetry design system.
 
 ```bash
-# Open a new terminal and navigate to the frontend directory
+# Open a new terminal window
 cd frontend
 
-# Install Node modules
+# Install dependencies
 npm install
 
-# Start the Vite development server
+# Start Vite development server
 npm run dev
 ```
 
-> **Frontend Access:**  
-> Open your browser at: **`http://localhost:5173`**
+> **Access Application:**  
+> Open your browser at **`http://localhost:5173`** (Default entry point routes to Live Triage Board or Admin Console).
 
 ---
 
-## 🚀 Key Modules & Navigation Routes
+## 🧭 Navigation Directory & Routes
 
 | Route | Module | Purpose |
 |---|---|---|
 | `/p/:projectKey/board` | **Live Triage Board** *(#1 Priority)* | Real-time Kanban board with pulsating radar beacon, priority filters, team comments, and evidence lockers. |
-| `/admin/overview` | **Enterprise Admin Console** | Platform health, multi-project usage, connectors catalog & security policies. |
-| `/admin/projects` | **Projects Fleet** | Register new enterprise projects, configure tiers, and manage project lifecycles. |
-| `/p/:projectKey/overview` | **Project Command Center** | Real-time SLA compliance, MTTA/MTTR metrics, active incidents, and telemetry feeds. |
 | `/p/:projectKey/triage` | **Auto-Triage Hub** | Live Jira/ServiceNow polling, triage feed, service flow visualizer, root cause analysis, GitLab diff approvals. |
-| `/p/:projectKey/investigations` | **Autonomous Investigation Stream** | Interactive multi-stage thinking progress card with live telemetry peeks, steering chips, and approval cards. |
+| `/p/:projectKey/investigations` | **Investigation Stream** | Interactive multi-stage thinking progress card with live telemetry peeks, steering chips, and approval cards. |
+| `/p/:projectKey/overview` | **Project Command Center** | Real-time SLA compliance, MTTA/MTTR metrics, active incidents, and telemetry feeds. |
 | `/p/:projectKey/metrics` | **SRE Reliability & Metrics** | Interactive dual-curve SVG area chart (MTTA/MTTR), SLO error budget gauge, daily velocity histogram & squad matrix. |
 | `/p/:projectKey/setup` | **Setup & Studio** | Multi-queue JQL generator, datasource connectors forum, dynamic environment flow, runbook uploader. |
 | `/p/:projectKey/environments` | **Environment Resolver** | Interactive conduit mapping connecting project environments to tool instances without hardcoding. |
 | `/p/:projectKey/reports` | **Autonomous SRE Reports** | 4-cycle historical improvement curves, triage stats, agent metrics, and SendGrid executive email brief dispatcher. |
 | `/p/:projectKey/feedback` | **Domain Feedback Loop** | Engineer validation, accuracy scoring, and reinforcement learning signals for ADK agents. |
+| `/admin/overview` | **Enterprise Admin Console** | Platform health, multi-project usage, connectors catalog & security policies. |
+| `/admin/projects` | **Projects Fleet** | Register new enterprise projects, configure tiers, and manage project lifecycles. |
+| `/admin/organizations` | **Organizations** | Multi-tenant organizational management and policy inheritance. |
+| `/admin/connectors` | **Connectors Catalog** | Manage connections to PostgreSQL, Oracle, Datadog, Splunk, Kubernetes, and Jira. |
+| `/admin/system-health` | **System Health & Observability** | CPU, memory, socket connections, latency distributions, and connector ping status. |
+| `/admin/billing` | **FinOps & Model Usage** | Per-project token attribution, cost tracking, and model rate limit monitoring. |
+| `/admin/security-policy` | **Security & Audit Logs** | Immutable audit ledger of every prompt, tool query, approval, and administrative change. |
+| `/docs` | **Platform Knowledge Base** | In-app operational tour, architecture breakdown, prompt recipes, and live schema tester. |
 
 ---
 
-## 📦 Sentrix Customization Skills Catalog (`skills/`)
+## 🔐 Core Invariants & Security Guardrails
 
-A turnkey architectural skill catalog is available in `skills/` to replicate the Sentrix platform into any React/Next.js/FastAPI codebase:
-- [`skills/sentrix-platform-architecture/SKILL.md`](./skills/sentrix-platform-architecture/SKILL.md): Master design system, color tokens, and implementation guidelines.
-- [`skills/sentrix-platform-architecture/InvestigationStreamChat.jsx`](./skills/sentrix-platform-architecture/InvestigationStreamChat.jsx): Standalone investigation stream with interactive thinking progress card.
-- [`skills/sentrix-platform-architecture/SentrixAutonomousChat.jsx`](./skills/sentrix-platform-architecture/SentrixAutonomousChat.jsx): Standalone drop-in chat component with zero-trust action approvals.
-- [`skills/sentrix-platform-architecture/COMPONENT_ARCHITECTURE_AND_HIGHLIGHTING_REPORT.md`](./skills/sentrix-platform-architecture/COMPONENT_ARCHITECTURE_AND_HIGHLIGHTING_REPORT.md): Deep-dive report on component architecture, highlighting logic, and interactive graphs.
-- [`skills/sentrix-platform-architecture/INVESTIGATION_STREAM_AND_APPROVALS_SPEC.md`](./skills/sentrix-platform-architecture/INVESTIGATION_STREAM_AND_APPROVALS_SPEC.md): Agent triggers, tool conduits, and cryptographic action approval state machines.
+Sentrix enforces five non-negotiable architectural invariants:
 
----
-
-## 🛠️ Multi-Queue Jira & ServiceNow Ingestion
-
-Sentrix polls Jira queues and ServiceNow incident tables concurrently without hardcoded parameters:
-- **JQL Pattern**:
-  ```sql
-  project = "BILLING" AND (queue in ("BILLING-SRE-QUEUE", "PAYMENTS-GATEWAY-QUEUE") OR fixTeam = "Payments Core Team" OR assignee in ("sarah.k@company.com")) AND status in ("Open", "In Progress", "Escalated") ORDER BY priority DESC
-  ```
-- **ServiceNow Table**: `sn_incident` filtered by CMDB CI `cmdb_ci_service=Billing Gateway`.
+1. **Reasoning is NOT Authorization:**  
+   LLMs generate diagnoses and proposals, but have **zero autonomous write capabilities**. Mutating actions require explicit human sign-off via cryptographic action proposals.
+2. **Read-Only Auto-Triage:**  
+   All automatic probes dispatched by the Tool Broker are strictly verified read-only queries (`SELECT`, `kubectl get`, `datadog query`, `splunk search`). AST parsing blocks write statements.
+3. **Decoupled Environment-to-Tool Conduits:**  
+   No hardcoded URLs. Projects define dynamic environment lists (e.g. `["us-east-prod", "eu-dr", "stage-alpha"]`), and the Resolver maps them to concrete tool instances.
+4. **Zero-Trust Token Vault & PII Redaction:**  
+   External credentials (passwords, tokens, SSH keys) remain encrypted in the backend. Sensitive customer patterns (JWTs, PANs, emails) are stripped before sending telemetry to models.
+5. **Deterministic Auditability:**  
+   Every investigation run produces an immutable audit record containing model snapshots, token consumption, raw tool commands, approval signatures, and git commit hashes.
 
 ---
 
-## 🔐 Cryptographic Remediation Safeguards
-- **Read-Only Auto-Triage**: All diagnostic queries executed through the Tool Broker are strictly read-only (`SELECT`, `kubectl get`, `datadog query`).
-- **Governed Action Proposals**: Any modifying action (restarting pods, tripping circuit breakers, scaling pools, applying database indexes) generates a **Cryptographic Action Proposal** awaiting manual domain engineer approval.
-- **GitLab MR Automation**: Fix branches (e.g. `fix/BILL-1049-hikari-pool`) and before/after merge requests are pre-staged for one-click human verification.
+## 📚 Documentation Index
+
+[`docs/README.md`](./docs/README.md) is the canonical documentation map. Use the focused guides below for the relevant audience:
+
+- [Platform Architecture & Operational Specification (`docs/HOW_THE_PROJECT_WORKS.md`)](./docs/HOW_THE_PROJECT_WORKS.md) — Canonical guide to the 4-plane model, incident lifecycle, and subsystem mechanics.
+- [Production Architecture & Data Model (`docs/production-architecture.md`)](./docs/production-architecture.md) — Multi-tenant hierarchy, persistence lifecycle, ADK runtime, and deployment topologies.
+- [Skills & 4D Request Classification Architecture (`docs/SENTRIX_SKILLS_AND_REQUEST_CLASSIFICATION_ARCHITECTURE.md`)](./docs/SENTRIX_SKILLS_AND_REQUEST_CLASSIFICATION_ARCHITECTURE.md) — 4-layer skill hierarchy (L0–L3) and 4-dimensional classification matrix.
+- [DeepSeek Harness & Plugin Architecture (`docs/harness-plugins.md`)](./docs/harness-plugins.md) — Microkernel plugin lifecycle and configuration inheritance.
+- [Application Source & Local Data Policy (`docs/local-data-policy.md`)](./docs/local-data-policy.md) — Local data retention, storage guidelines, and git hygiene.
+- [Backend Architecture & API Guide (`backend/README.md`)](./backend/README.md) — Backend developer manual, directory breakdown, and REST/SSE endpoints.
+- [Frontend Architecture & Design Guide (`frontend/README.md`)](./frontend/README.md) — React 19 UI architecture, telemetry design system, and component catalog.
+- [Skills Catalog & Organization (`skills/README.md`)](./skills/README.md) — Guide to platform diagnostic skills and developer assistance skills.
 
 ---
 
-## 🧪 Production Build & Validation
-
-To test and build the production bundle:
+## 🧪 Testing & Build Verification
 
 ```bash
-# Frontend production build
+# Frontend production build & lint
 cd frontend
+npm run lint
 npm run build
 
 # Backend automated test suite
 cd ../backend
-pytest
+python -m unittest discover tests/
+# Or if pytest is installed: pytest tests/
 ```
+
+---
+
+*Sentrix — Autonomous Site Reliability Engineering with Uncompromising Governance.*

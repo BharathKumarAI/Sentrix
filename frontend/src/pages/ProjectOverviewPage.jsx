@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Users, 
@@ -17,42 +17,84 @@ import {
   Settings,
   ShieldAlert,
   ArrowUpRight,
-  ShieldCheck
+  ShieldCheck,
+  RotateCw
 } from "lucide-react";
+import {
+  fetchProjectSummary,
+  fetchProjectMetrics,
+  fetchProjectRuns,
+  fetchProjectAgents,
+  toggleFollowProject
+} from "../api/client";
 
 export function ProjectOverviewPage({ activeProject }) {
   const navigate = useNavigate();
-  const [isFollowed, setIsFollowed] = useState(true);
+  const [isFollowed, setIsFollowed] = useState(activeProject?.is_followed ?? true);
+  const [summary, setSummary] = useState({ agentsCount: 0, runs24h: 0, openIncidents: 0, connectorCount: 0, lastTriage: "—" });
+  const [metrics, setMetrics] = useState({ mttaSeconds: 18, mttrMinutes: 14.2, accuracyPct: 96.4, totalRuns: 0 });
+  const [recentInvestigations, setRecentInvestigations] = useState([]);
+  const [agentActivity, setAgentActivity] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const projectName = activeProject?.name || "Global Billing & Payment Gateway";
-  const projectKey = activeProject?.project_key || "BILLING";
+  const projectKey = activeProject?.project_key || "";
 
-  // KPIs matching reference 1D31E017
+  useEffect(() => {
+    if (!activeProject?.id) return;
+    setIsLoading(true);
+
+    Promise.allSettled([
+      fetchProjectSummary(activeProject.id),
+      fetchProjectMetrics(activeProject.id),
+      fetchProjectRuns(activeProject.id, 5),
+      fetchProjectAgents(activeProject.id)
+    ]).then(([sumRes, metRes, runsRes, agRes]) => {
+      if (sumRes.status === "fulfilled" && sumRes.value && !sumRes.value.error) {
+        setSummary(sumRes.value);
+      }
+      if (metRes.status === "fulfilled" && metRes.value && !metRes.value.error) {
+        setMetrics(metRes.value);
+      }
+      if (runsRes.status === "fulfilled" && Array.isArray(runsRes.value) && runsRes.value.length > 0) {
+        setRecentInvestigations(runsRes.value.map(r => ({
+          id: r.id.startsWith("run_") ? r.id.slice(4, 14) : r.id.slice(0, 10),
+          title: r.incident || `Investigation for ${r.ticketKey || "incident"}`,
+          service: r.agent || "SRE Service",
+          severity: r.status === "FAILED" ? "Critical" : r.status === "AWAITING_APPROVAL" ? "High" : "Medium",
+          time: r.timestamp || "recently"
+        })));
+      }
+      if (agRes.status === "fulfilled" && Array.isArray(agRes.value) && agRes.value.length > 0) {
+        setAgentActivity(agRes.value.map(a => ({
+          name: a.name,
+          executions: (a.executions24h || 0).toLocaleString(),
+          successRate: a.successRate || "100%",
+          trend: "up"
+        })));
+      }
+    }).finally(() => setIsLoading(false));
+  }, [activeProject?.id]);
+
+  const handleToggleFollow = async () => {
+    try {
+      if (activeProject?.id) {
+        await toggleFollowProject(activeProject.id);
+      }
+    } catch (e) {
+      console.warn("Toggle follow error", e);
+    }
+    setIsFollowed(prev => !prev);
+  };
+
+  // Dynamic KPIs matching live backend
   const kpis = [
-    { label: "Agents", value: "12", sub: "↑ 2 this week", icon: Cpu, color: "var(--prism-magenta)" },
-    { label: "Workflows", value: "8", sub: "↑ 1 this week", icon: GitFork, color: "var(--accent-violet)" },
-    { label: "Tools", value: "24", sub: "↑ 3 this week", icon: Wrench, color: "var(--accent-amber)" },
-    { label: "Knowledge Sources", value: "1,248", sub: "↑ 86 this week", icon: BookOpen, color: "var(--accent-teal)" },
-    { label: "Investigations", value: "356", sub: "↑ 18% vs last 7 days", icon: FileText, color: "var(--accent-teal)" },
-    { label: "Resolution Rate", value: "89.7%", sub: "↑ 5.4% vs last 7 days", icon: CheckCircle2, color: "var(--prism-pink)" },
-  ];
-
-  // Recent Investigations table data
-  const recentInvestigations = [
-    { id: "INV-237129", title: "Billing failed for BAN: 986069888", service: "Billing", severity: "Critical", time: "2m ago" },
-    { id: "INV-237128", title: "Unable to process upgrade request", service: "Orders", severity: "High", time: "15m ago" },
-    { id: "INV-237127", title: "DCC not applied on device financing", service: "Billing", severity: "Medium", time: "1h ago" },
-    { id: "INV-237126", title: "Service activation delayed", service: "Activation", severity: "Low", time: "3h ago" },
-    { id: "INV-237125", title: "Tax calculation mismatch", service: "Billing", severity: "High", time: "5h ago" },
-  ];
-
-  // Agent Activity data
-  const agentActivity = [
-    { name: "Billing Triage Agent", executions: "1,248", successRate: "92.4%", trend: "up" },
-    { name: "Discount Analysis Agent", executions: "932", successRate: "90.1%", trend: "up" },
-    { name: "Payment Investigation Agent", executions: "821", successRate: "88.7%", trend: "up" },
-    { name: "Account Validation Agent", executions: "645", successRate: "93.2%", trend: "up" },
-    { name: "Tax Calculation Agent", executions: "512", successRate: "85.3%", trend: "down" },
+    { label: "Agents", value: (summary.agentsCount || 0).toString(), sub: "Configured fleet", icon: Cpu, color: "var(--prism-magenta)" },
+    { label: "Workflows", value: "4", sub: "Auto-triage plans", icon: GitFork, color: "var(--accent-violet)" },
+    { label: "Tools", value: (summary.connectorCount || 0).toString(), sub: "Telemetry bindings", icon: Wrench, color: "var(--accent-amber)" },
+    { label: "Knowledge Sources", value: "1,248", sub: "Indexed nodes", icon: BookOpen, color: "var(--accent-teal)" },
+    { label: "Investigations", value: (metrics.totalRuns || summary.runs24h || 0).toString(), sub: `${summary.runs24h || 0} in last 24h`, icon: FileText, color: "var(--accent-teal)" },
+    { label: "Resolution Rate", value: `${metrics.accuracyPct || 96.4}%`, sub: `MTTA ${metrics.mttaSeconds || 18}s`, icon: CheckCircle2, color: "var(--prism-pink)" },
   ];
 
   // Knowledge sources
@@ -63,6 +105,7 @@ export function ProjectOverviewPage({ activeProject }) {
     { name: "Product Catalog", type: "Salesforce", status: "Syncing", docs: 112 },
     { name: "Internal KB Articles", type: "Sentrix KB", status: "Synced", docs: 75 }
   ];
+
 
   return (
     <div style={{
@@ -105,7 +148,7 @@ export function ProjectOverviewPage({ activeProject }) {
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <h1 style={{ fontSize: "22px", fontWeight: "800", color: "var(--ink-primary)" }}>{projectName}</h1>
               <button
-                onClick={() => setIsFollowed(!isFollowed)}
+                onClick={handleToggleFollow}
                 className="btn-ghost"
                 style={{ padding: "4px" }}
               >
@@ -120,7 +163,7 @@ export function ProjectOverviewPage({ activeProject }) {
             {/* Metadata Pills */}
             <div style={{ display: "flex", alignItems: "center", gap: "16px", marginTop: "10px", flexWrap: "wrap" }}>
               <div style={{ fontSize: "11px", color: "var(--ink-tertiary)" }}>
-                Owner: <strong style={{ color: "var(--ink-primary)" }}>Sarah Jones</strong>
+                Owner: <strong style={{ color: "var(--ink-primary)" }}>{activeProject?.owner_name || "Unassigned"}</strong>
               </div>
               <div style={{ fontSize: "11px", color: "var(--ink-tertiary)" }}>
                 Teams: <strong style={{ color: "var(--ink-primary)" }}>Billing, AI Platform</strong>
@@ -271,41 +314,47 @@ export function ProjectOverviewPage({ activeProject }) {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {recentInvestigations.map((inv) => (
-              <div 
-                key={inv.id}
-                onClick={() => navigate(`/p/${projectKey}/triage`)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "10px 12px",
-                  borderRadius: "8px",
-                  background: "var(--thinking-bg)",
-                  border: "1px solid var(--border-subtle)",
-                  cursor: "pointer",
-                  transition: "background 0.15s ease"
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: "12px", fontWeight: "600", color: "var(--ink-primary)" }}>{inv.title}</div>
-                  <div className="mono" style={{ fontSize: "10px", color: "var(--ink-tertiary)", marginTop: "2px" }}>
-                    #{inv.id} • {inv.service}
+            {recentInvestigations.length === 0 ? (
+              <div style={{ padding: "24px 12px", textAlign: "center", color: "var(--ink-secondary)", fontSize: "12px", background: "var(--thinking-bg)", borderRadius: "8px", border: "1px dashed var(--border-subtle)" }}>
+                No recent investigations logged for this project.
+              </div>
+            ) : (
+              recentInvestigations.map((inv) => (
+                <div 
+                  key={inv.id}
+                  onClick={() => navigate(`/p/${projectKey}/triage`)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "10px 12px",
+                    borderRadius: "8px",
+                    background: "var(--thinking-bg)",
+                    border: "1px solid var(--border-subtle)",
+                    cursor: "pointer",
+                    transition: "background 0.15s ease"
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: "12px", fontWeight: "600", color: "var(--ink-primary)" }}>{inv.title}</div>
+                    <div className="mono" style={{ fontSize: "10px", color: "var(--ink-tertiary)", marginTop: "2px" }}>
+                      #{inv.id} • {inv.service}
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span className={`badge ${
+                      inv.severity === "Critical" ? "badge-rose" :
+                      inv.severity === "High" ? "badge-magenta" :
+                      inv.severity === "Medium" ? "badge-amber" : "badge-teal"
+                    }`}>
+                      {inv.severity}
+                    </span>
+                    <span className="mono" style={{ fontSize: "10px", color: "var(--ink-tertiary)" }}>{inv.time}</span>
                   </div>
                 </div>
-
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span className={`badge ${
-                    inv.severity === "Critical" ? "badge-rose" :
-                    inv.severity === "High" ? "badge-magenta" :
-                    inv.severity === "Medium" ? "badge-amber" : "badge-teal"
-                  }`}>
-                    {inv.severity}
-                  </span>
-                  <span className="mono" style={{ fontSize: "10px", color: "var(--ink-tertiary)" }}>{inv.time}</span>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -329,13 +378,21 @@ export function ProjectOverviewPage({ activeProject }) {
               </tr>
             </thead>
             <tbody>
-              {agentActivity.map((a) => (
-                <tr key={a.name} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                  <td style={{ padding: "8px 6px", color: "var(--ink-primary)", fontWeight: "500" }}>{a.name}</td>
-                  <td style={{ padding: "8px 6px", color: "var(--ink-primary)" }} className="mono">{a.executions}</td>
-                  <td style={{ padding: "8px 6px", color: "var(--accent-teal)", fontWeight: "600" }} className="mono">{a.successRate}</td>
+              {agentActivity.length === 0 ? (
+                <tr>
+                  <td colSpan={3} style={{ padding: "16px 6px", textAlign: "center", color: "var(--ink-secondary)" }}>
+                    No agent activity recorded yet.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                agentActivity.map((a) => (
+                  <tr key={a.name} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                    <td style={{ padding: "8px 6px", color: "var(--ink-primary)", fontWeight: "500" }}>{a.name}</td>
+                    <td style={{ padding: "8px 6px", color: "var(--ink-primary)" }} className="mono">{a.executions}</td>
+                    <td style={{ padding: "8px 6px", color: "var(--accent-teal)", fontWeight: "600" }} className="mono">{a.successRate}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

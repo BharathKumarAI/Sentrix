@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { PrismShell } from "./components/layout/PrismShell";
 import { ProjectOverviewPage } from "./pages/ProjectOverviewPage";
 import { ProjectAgentsPage } from "./pages/ProjectAgentsPage";
@@ -11,8 +11,10 @@ import { ProjectMetricsPage } from "./pages/ProjectMetricsPage";
 import { ProjectReportsPage } from "./pages/ProjectReportsPage";
 import { ProjectFeedbackPage } from "./pages/ProjectFeedbackPage";
 import { ProjectSetupStudioPage } from "./pages/ProjectSetupStudioPage";
+import { ProjectArtifactsPage } from "./pages/ProjectArtifactsPage";
 import { DocsPage } from "./pages/DocsPage";
 
+import { AdminOrganizationsPage } from "./pages/AdminOrganizationsPage";
 import { AdminOverviewPage } from "./pages/AdminOverviewPage";
 import { AdminDashboardPage } from "./pages/AdminDashboardPage";
 import { AdminConnectorsPage } from "./pages/AdminConnectorsPage";
@@ -26,11 +28,12 @@ import { AdminApiKeysPage } from "./pages/AdminApiKeysPage";
 import { AdminBillingUsagePage } from "./pages/AdminBillingUsagePage";
 import { AdminUsersPage } from "./pages/AdminUsersPage";
 import { AdminSecurityPolicyPage } from "./pages/AdminSecurityPolicyPage";
+import { AdminHarnessPluginsPage } from "./pages/AdminHarnessPluginsPage";
+import { AdminHarnessConfigurationPage } from "./pages/AdminHarnessConfigurationPage";
 
 import { AutoTriageHub } from "./components/AutoTriageHub";
 import { InvestigationStream } from "./components/InvestigationStream";
 import { ActionProposalCard } from "./components/ActionProposalCard";
-import { EvidenceGrid } from "./components/EvidenceGrid";
 import { OkfKnowledgeBrowser } from "./components/OkfKnowledgeBrowser";
 import { EnvironmentMatrixEditor } from "./components/EnvironmentMatrixEditor";
 import { ParameterStudio } from "./components/ParameterStudio";
@@ -38,6 +41,9 @@ import { ProjectCustomizationView } from "./components/ProjectCustomizationView"
 import { NewProjectModal } from "./components/NewProjectModal";
 import { LandingPage } from "./pages/LandingPage";
 import { LiveTriageBoard } from "./components/LiveTriageBoard";
+import { GeneralViewerPortalPage } from "./pages/GeneralViewerPortalPage";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import { AdminSyncProvider, useAdminSync } from "./context/AdminSyncContext";
 import { 
   fetchProjects, 
   fetchPendingActions, 
@@ -46,13 +52,19 @@ import {
 } from "./api/client";
 import { ShieldCheck } from "lucide-react";
 
-export function App() {
+function AppContent() {
+  const { currentPersona, isPlatformAdmin, isGeneralViewer } = useAuth();
   const [projects, setProjects] = useState([]);
   const [activeProject, setActiveProject] = useState(null);
   const [activeEnvironment, setActiveEnvironment] = useState("prod");
   const [pendingActions, setPendingActions] = useState([]);
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
-  const [delegatedIdentity] = useState("kbk@company.com");
+
+  useAdminSync((event) => {
+    if (event?.type && event.type.startsWith("PROJECT_")) {
+      loadProjects();
+    }
+  });
 
   const loadProjects = async () => {
     try {
@@ -92,6 +104,7 @@ export function App() {
       loadPendingActions();
     } catch (e) {
       console.error("Failed to approve action", e);
+      alert(e.message || "Approval failed");
     }
   };
 
@@ -104,16 +117,18 @@ export function App() {
     }
   };
 
+  const currentProjectKey = activeProject?.project_key || "";
+
   return (
     <BrowserRouter>
       <Routes>
         {/* Sentrix Platform Landing Page */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/landing" element={<LandingPage />} />
-        
-        {/* Admin Console Routes (/admin/*) */}
+
+        {/* General Viewer Dedicated Portal Workspace */}
         <Route
-          path="/admin"
+          path="/portal"
           element={
             <PrismShell
               projects={projects}
@@ -122,7 +137,28 @@ export function App() {
               activeEnvironment={activeEnvironment}
               onSelectEnvironment={setActiveEnvironment}
               onOpenNewProjectModal={() => setShowNewProjectModal(true)}
-            />
+            >
+              <GeneralViewerPortalPage />
+            </PrismShell>
+          }
+        />
+        
+        {/* Admin Console Routes (/admin/*) - Restricted to Platform Admin */}
+        <Route
+          path="/admin"
+          element={
+            isPlatformAdmin ? (
+              <PrismShell
+                projects={projects}
+                activeProject={activeProject}
+                onSelectProject={setActiveProject}
+                activeEnvironment={activeEnvironment}
+                onSelectEnvironment={setActiveEnvironment}
+                onOpenNewProjectModal={() => setShowNewProjectModal(true)}
+              />
+            ) : (
+              <Navigate to={isGeneralViewer ? "/portal" : `/p/${currentProjectKey}/overview`} replace />
+            )
           }
         >
           <Route index element={<Navigate to="/admin/overview" replace />} />
@@ -132,30 +168,37 @@ export function App() {
           <Route path="skills" element={<AdminSkillsCatalogPage />} />
           <Route path="prompts" element={<AdminPromptsPage />} />
           <Route path="connectors" element={<AdminConnectorsPage />} />
-          <Route path="environments" element={<EnvironmentMatrixEditor activeProject={activeProject} />} />
+          <Route path="environments" element={<Navigate to={`/p/${currentProjectKey}/environments`} replace />} />
           <Route path="models" element={<AdminModelProvidersPage />} />
           <Route path="keys" element={<AdminApiKeysPage />} />
           <Route path="health" element={<AdminSystemHealthPage />} />
           <Route path="audit" element={<AdminAuditLogsPage />} />
           <Route path="billing" element={<AdminBillingUsagePage />} />
           <Route path="reports" element={<ProjectReportsPage activeProject={activeProject} />} />
+          <Route path="organizations" element={<AdminOrganizationsPage />} />
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="security" element={<AdminSecurityPolicyPage />} />
+          <Route path="harness" element={<AdminHarnessPluginsPage />} />
+          <Route path="harness-configuration" element={<AdminHarnessConfigurationPage />} />
           <Route path="docs" element={<DocsPage activeProject={activeProject} />} />
         </Route>
 
-        {/* Project Routes (/p/:projectKey/*) */}
+        {/* Project Routes (/p/:projectKey/*) - Gated for General Viewer */}
         <Route
           path="/p/:projectKey"
           element={
-            <PrismShell
-              projects={projects}
-              activeProject={activeProject}
-              onSelectProject={setActiveProject}
-              activeEnvironment={activeEnvironment}
-              onSelectEnvironment={setActiveEnvironment}
-              onOpenNewProjectModal={() => setShowNewProjectModal(true)}
-            />
+            isGeneralViewer ? (
+              <Navigate to="/portal" replace />
+            ) : (
+              <PrismShell
+                projects={projects}
+                activeProject={activeProject}
+                onSelectProject={setActiveProject}
+                activeEnvironment={activeEnvironment}
+                onSelectEnvironment={setActiveEnvironment}
+                onOpenNewProjectModal={() => setShowNewProjectModal(true)}
+              />
+            )
           }
         >
           <Route index element={<Navigate to="overview" replace />} />
@@ -166,7 +209,7 @@ export function App() {
               <AutoTriageHub
                 activeProject={activeProject}
                 activeEnvironment={activeEnvironment}
-                delegatedIdentity={delegatedIdentity}
+                delegatedIdentity={currentPersona.email}
                 onActionApproved={handleApproveAction}
                 onActionRejected={handleRejectAction}
                 onViewEvidence={() => {}}
@@ -180,7 +223,7 @@ export function App() {
                 activeProject={activeProject}
                 activeEnvironment={activeEnvironment}
                 onSelectEnvironment={setActiveEnvironment}
-                delegatedIdentity={delegatedIdentity}
+                delegatedIdentity={currentPersona.email}
               />
             }
           />
@@ -209,7 +252,7 @@ export function App() {
                       <ActionProposalCard
                         key={prop.id}
                         proposal={prop}
-                        delegatedIdentity={delegatedIdentity}
+                        delegatedIdentity={currentPersona.email}
                         onApprove={handleApproveAction}
                         onReject={handleRejectAction}
                       />
@@ -224,6 +267,7 @@ export function App() {
           <Route path="workflows" element={<ProjectWorkflowsPage activeProject={activeProject} />} />
           <Route path="tickets" element={<ProjectTicketsPage activeProject={activeProject} />} />
           <Route path="runs" element={<ProjectRunsPage activeProject={activeProject} />} />
+          <Route path="artifacts" element={<ProjectArtifactsPage activeProject={activeProject} />} />
           <Route path="knowledge" element={<OkfKnowledgeBrowser activeProject={activeProject} />} />
           <Route path="board" element={<LiveTriageBoard activeProject={activeProject} activeEnvironment={activeEnvironment} />} />
           <Route path="metrics" element={<ProjectMetricsPage activeProject={activeProject} />} />
@@ -231,15 +275,16 @@ export function App() {
           <Route path="feedback" element={<ProjectFeedbackPage activeProject={activeProject} />} />
           <Route path="setup" element={<ProjectSetupStudioPage activeProject={activeProject} onProjectUpdated={loadProjects} />} />
           <Route path="environments" element={<EnvironmentMatrixEditor activeProject={activeProject} />} />
-          <Route path="parameters" element={<ParameterStudio activeProject={activeProject} isAdmin={true} />} />
+          <Route path="parameters" element={<ParameterStudio activeProject={activeProject} isAdmin={isPlatformAdmin} />} />
           <Route path="settings" element={<ProjectCustomizationView activeProject={activeProject} />} />
+          <Route path="harness" element={<AdminHarnessPluginsPage />} />
           <Route path="docs" element={<DocsPage activeProject={activeProject} />} />
         </Route>
 
-        <Route path="/docs" element={<Navigate to="/p/BILLING/docs" replace />} />
+        <Route path="/docs" element={<Navigate to={`/p/${currentProjectKey}/docs`} replace />} />
 
         {/* Catch-all fallback */}
-        <Route path="*" element={<Navigate to="/p/BILLING/overview" replace />} />
+        <Route path="*" element={<Navigate to={isGeneralViewer ? "/portal" : `/p/${currentProjectKey}/overview`} replace />} />
       </Routes>
 
       {/* New Project Registration Modal */}
@@ -255,6 +300,16 @@ export function App() {
         />
       )}
     </BrowserRouter>
+  );
+}
+
+export function App() {
+  return (
+    <AuthProvider>
+      <AdminSyncProvider>
+        <AppContent />
+      </AdminSyncProvider>
+    </AuthProvider>
   );
 }
 

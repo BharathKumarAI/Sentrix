@@ -94,7 +94,7 @@ export function ProjectCustomizationView({ activeProject }) {
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
               <span style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink-tertiary)", textTransform: "uppercase" }}>
-                {activeProject?.project_key || "BILLING"} • SETTINGS & INSTRUCTIONS
+                {activeProject?.project_key || ""} • SETTINGS & INSTRUCTIONS
               </span>
               <span className="badge badge-teal">Project Directives</span>
               <span className="badge badge-magenta">ADK Ingest</span>

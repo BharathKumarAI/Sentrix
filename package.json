@@ -1,0 +1,22 @@
+{
+  "name": "sentrix-prism",
+  "version": "2.0.0",
+  "description": "Sentrix Autonomous SRE & Telemetry Platform",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "preview": "npm run preview --prefix frontend",
+    "lint": "npm run lint --prefix frontend",
+    "backend": "python3 main.py",
+    "start": "python3 main.py",
+    "setup:frontend": "npm install --prefix frontend",
+    "setup:local": "python3 scripts/install_cloud_deps.py --cloud local",
+    "setup:azure": "python3 scripts/install_cloud_deps.py --cloud azure",
+    "setup:gcp": "python3 scripts/install_cloud_deps.py --cloud gcp",
+    "setup:aws": "python3 scripts/install_cloud_deps.py --cloud aws",
+    "setup:k8s": "python3 scripts/install_cloud_deps.py --cloud k8s",
+    "setup:all": "python3 scripts/install_cloud_deps.py --cloud all",
+    "setup:cloud": "python3 scripts/install_cloud_deps.py"
+  }
+}

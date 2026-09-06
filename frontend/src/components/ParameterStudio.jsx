@@ -11,7 +11,7 @@ import {
   Search,
   Filter
 } from "lucide-react";
-import { fetchParameters, setParameterOverride } from "../api/client";
+import { fetchParameters, setParameterOverride, getCurrentUserId } from "../api/client";
 
 export function ParameterStudio({ activeProject, isAdmin = true }) {
   const [params, setParams] = useState([]);
@@ -47,7 +47,7 @@ export function ParameterStudio({ activeProject, isAdmin = true }) {
         parameter_key: editingParam.parameter_key,
         level: overrideLevel,
         project_id: overrideLevel === "PROJECT" ? activeProject?.id : null,
-        user_id: overrideLevel === "USER" ? "usr_admin_01" : null,
+        user_id: overrideLevel === "USER" ? getCurrentUserId() : null,
         configured_value: parsedVal
       });
 
@@ -115,7 +115,7 @@ export function ParameterStudio({ activeProject, isAdmin = true }) {
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
               <span style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink-tertiary)", textTransform: "uppercase" }}>
-                {activeProject?.project_key || "BILLING"} • CONFIGURATION PARAMETERS
+                {activeProject?.project_key || ""} • CONFIGURATION PARAMETERS
               </span>
               <span className="badge badge-teal">Zero Hardcoding</span>
               <span className="badge badge-magenta">3-Tier Hierarchy</span>
@@ -278,7 +278,7 @@ export function ParameterStudio({ activeProject, isAdmin = true }) {
                 value={overrideLevel}
                 onChange={(e) => setOverrideLevel(e.target.value)}
                 className="glass-card"
-                style={{ width: "100%", padding: "8px 12px", marginTop: "4px", color: "#fff", background: "#0b102b" }}
+                style={{ width: "100%", padding: "8px 12px", marginTop: "4px", color: "var(--ink-input)", background: "var(--bg-input)" }}
               >
                 <option value="PROJECT">Project Level Override ({activeProject?.name})</option>
                 <option value="USER">User Customized Override (Current User)</option>

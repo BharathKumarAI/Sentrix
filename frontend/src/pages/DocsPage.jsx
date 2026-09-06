@@ -22,13 +22,16 @@ import {
   Network,
   Compass,
   MessageSquare,
-  Activity
+  Activity,
+  BarChart3,
+  ClipboardList,
+  Container
 } from "lucide-react";
 
 export function DocsPage({ activeProject }) {
   const { projectKey } = useParams();
   const navigate = useNavigate();
-  const currentKey = projectKey || activeProject?.project_key || "BILLING";
+  const currentKey = projectKey || activeProject?.project_key || "";
 
   const [activeTab, setActiveTab] = useState("how-to-use"); // "how-to-use" | "how-it-works" | "how-to-request" | "tools-connectors" | "mcp" | "tester"
   const [searchFilter, setSearchFilter] = useState("");
@@ -71,7 +74,7 @@ export function DocsPage({ activeProject }) {
       }
       setSchemaValidationResult({
         valid: true,
-        message: `Tool '${parsed.name}' is valid for Sentrix Tool Broker & ADK 2.8 binding. (Read-only: ${parsed.is_read_only !== false})`
+        message: `Tool '${parsed.name}' is valid for Sentrix Tool Broker & Google ADK binding. (Read-only: ${parsed.is_read_only !== false})`
       });
     } catch (err) {
       setSchemaValidationResult({
@@ -82,17 +85,17 @@ export function DocsPage({ activeProject }) {
   };
 
   return (
-    <div style={{
-      padding: "24px 32px",
-      display: "flex",
-      flexDirection: "column",
-      gap: "24px",
-      maxWidth: "1400px",
-      margin: "0 auto",
-      width: "100%",
-      overflowY: "auto",
-      height: "calc(100vh - 64px)"
-    }}>
+    <div
+      style={{
+        padding: "24px 32px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "24px",
+        overflowY: "auto",
+        minHeight: "100%",
+        boxSizing: "border-box"
+      }}
+    >
       {/* Unified Page Hero Card */}
       <div
         className="prism-card"
@@ -129,7 +132,7 @@ export function DocsPage({ activeProject }) {
               <span style={{ fontSize: "11.5px", fontWeight: "700", color: "var(--ink-tertiary)", textTransform: "uppercase" }}>
                 Platform Developer & Operational Documentation
               </span>
-              <span className="badge badge-magenta">ADK 2.8 Architecture</span>
+              <span className="badge badge-magenta">Google ADK Architecture</span>
               <span className="badge badge-teal">Gemini 2.5 Pro</span>
               <span className="badge badge-violet">MCP Ready</span>
             </div>
@@ -270,7 +273,7 @@ export function DocsPage({ activeProject }) {
               System Architecture & Core Engine
             </h3>
             <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "6px", lineHeight: 1.6 }}>
-              Sentrix uses Google ADK 2.8 on Gemini 2.5 Pro with strict zero-trust isolation:
+              Sentrix uses Google ADK on Gemini 2.5 Pro with strict zero-trust isolation:
             </p>
 
             <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "14px" }}>
@@ -310,30 +313,49 @@ export function DocsPage({ activeProject }) {
 
             <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "14px" }}>
               {[
-                { title: "📊 Telemetry Anomaly & Error Graph", text: "Show telemetry anomaly graph with p99 latency spikes and error rate volume", desc: "Renders SVG dual-curve latency & error volume chart via Datadog APM" },
-                { title: "🐘 Database Locks & Connection Pool", text: "Query database for active locks, blocked transactions, and HikariCP connection pool health", desc: "Interrogates pg_stat_activity and renders interactive query data table" },
-                { title: "☸️ Kubernetes Pod Crash Loops", text: "Check Kubernetes worker pod health, restart counts, and show recent container crash logs", desc: "Interrogates Kubernetes pods in project namespace and isolates stack traces" },
-                { title: "📋 Executive RCA Report", text: "Synthesize root cause analysis with timeline of events and stage remediation proposals", desc: "Renders Triage Report card with verified RCA, timeline, and 1-click action proposals" }
-              ].map((rec, idx) => (
-                <div key={idx} className="prism-card" style={{ padding: "16px", background: "rgba(255, 255, 255, 0.02)" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <strong style={{ fontSize: "13px", color: "var(--ink-primary)" }}>{rec.title}</strong>
-                    <button
-                      onClick={() => handleCopy(rec.text, `page-rec-${idx}`)}
-                      className="btn-ghost"
-                      style={{ fontSize: "11px", padding: "3px 8px" }}
-                    >
-                      {copiedSection === `page-rec-${idx}` ? <Check size={12} color="var(--accent-teal)" /> : <Copy size={12} />}
-                    </button>
+                { icon: BarChart3, color: "var(--prism-pink)", title: "Telemetry Anomaly & Error Graph", text: "Show telemetry anomaly graph with p99 latency spikes and error rate volume", desc: "Renders SVG dual-curve latency & error volume chart via Datadog APM" },
+                { icon: Database, color: "var(--accent-teal)", title: "Database Locks & Connection Pool", text: "Query database for active locks, blocked transactions, and HikariCP connection pool health", desc: "Interrogates pg_stat_activity and renders interactive query data table" },
+                { icon: Container, color: "var(--accent-violet)", title: "Kubernetes Pod Crash Loops", text: "Check Kubernetes worker pod health, restart counts, and show recent container crash logs", desc: "Interrogates Kubernetes pods in project namespace and isolates stack traces" },
+                { icon: ClipboardList, color: "var(--accent-amber)", title: "Executive RCA Report", text: "Synthesize root cause analysis with timeline of events and stage remediation proposals", desc: "Renders Triage Report card with verified RCA, timeline, and 1-click action proposals" }
+              ].map((rec, idx) => {
+                const IconComp = rec.icon;
+                return (
+                  <div key={idx} className="prism-card" style={{ padding: "16px", background: "rgba(255, 255, 255, 0.02)" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: "13px", fontWeight: "700", color: rec.color, display: "flex", alignItems: "center", gap: "8px" }}>
+                        <div style={{
+                          width: "24px",
+                          height: "24px",
+                          borderRadius: "6px",
+                          background: "rgba(255, 255, 255, 0.05)",
+                          border: "1px solid var(--border-subtle)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: rec.color,
+                          flexShrink: 0
+                        }}>
+                          <IconComp size={13} />
+                        </div>
+                        {rec.title}
+                      </span>
+                      <button
+                        onClick={() => handleCopy(rec.text, `page-rec-${idx}`)}
+                        className="btn-ghost"
+                        style={{ fontSize: "11px", padding: "3px 8px" }}
+                      >
+                        {copiedSection === `page-rec-${idx}` ? <Check size={12} color="var(--accent-teal)" /> : <Copy size={12} />}
+                      </button>
+                    </div>
+                    <code className="mono" style={{ display: "block", marginTop: "8px", fontSize: "12px", color: "var(--prism-pink)", background: "var(--bg-app)", border: "1px solid var(--border-subtle)", padding: "8px 12px", borderRadius: "6px" }}>
+                      "{rec.text}"
+                    </code>
+                    <p style={{ fontSize: "12px", color: "var(--ink-secondary)", marginTop: "6px", margin: 0 }}>
+                      {rec.desc}
+                    </p>
                   </div>
-                  <code className="mono" style={{ display: "block", marginTop: "8px", fontSize: "12px", color: "var(--prism-pink)", background: "rgba(0,0,0,0.35)", padding: "8px 12px", borderRadius: "6px" }}>
-                    "{rec.text}"
-                  </code>
-                  <p style={{ fontSize: "12px", color: "var(--ink-secondary)", marginTop: "6px", margin: 0 }}>
-                    {rec.desc}
-                  </p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -353,7 +375,7 @@ export function DocsPage({ activeProject }) {
             <div style={{ marginTop: "16px", position: "relative" }}>
               <pre className="prism-card mono" style={{
                 padding: "16px",
-                background: "rgba(0, 0, 0, 0.4)",
+                background: "var(--bg-app)",
                 border: "1px solid var(--border-subtle)",
                 fontSize: "12px",
                 color: "var(--ink-primary)",
@@ -395,7 +417,7 @@ ToolBroker.register_tool(
             <div style={{ marginTop: "16px", position: "relative" }}>
               <pre className="prism-card mono" style={{
                 padding: "16px",
-                background: "rgba(0, 0, 0, 0.4)",
+                background: "var(--bg-app)",
                 border: "1px solid var(--border-subtle)",
                 fontSize: "12px",
                 color: "var(--ink-primary)",
@@ -424,7 +446,7 @@ ToolBroker.register_tool(
               Live Tool Schema Validator
             </h3>
             <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "6px" }}>
-              Validate your tool schema against Sentrix ADK 2.8 runtime specifications:
+              Validate your tool schema against Sentrix ADK runtime specifications:
             </p>
 
             <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>

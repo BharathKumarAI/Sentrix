@@ -292,7 +292,7 @@ Based on live telemetry for \`${ticketKey}\`, all diagnostic indicators verify t
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <span className="mono badge badge-violet" style={{ fontSize: "10px" }}>
-            ADK 2.8 Runtime
+            ADK Runtime
           </span>
         </div>
       </div>

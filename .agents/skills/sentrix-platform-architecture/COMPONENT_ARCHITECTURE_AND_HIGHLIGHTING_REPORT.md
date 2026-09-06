@@ -50,7 +50,7 @@ In [AutoTriageHub.jsx](file:///Users/kbk/Desktop/Prism/frontend/src/components/A
 
 ### 1. `AutoTriageHub.jsx`
 - **Location:** `frontend/src/components/AutoTriageHub.jsx`
-- **Purpose:** Ingests live incidents, executes autonomous triage with ADK 2.8, surfaces in-line root cause intelligence, and provides an interactive remediation studio.
+- **Purpose:** Ingests live incidents, executes autonomous triage with Google ADK, surfaces in-line root cause intelligence, and provides an interactive remediation studio.
 - **Key Modules:**
   1. **Polling Controller:** Switchable between Jira JQL Multi-Queue and ServiceNow CMDB polling modes. Renders live sync latency, next scheduled poll countdown, and active poller health.
   2. **Automated Runs Track Bar:** 3 metric cards tracking Ingestion Poller status, Autonomous Triage MTTA (mean 18 seconds), and Automated Reporting execution status.
@@ -186,7 +186,7 @@ In [AutoTriageHub.jsx](file:///Users/kbk/Desktop/Prism/frontend/src/components/A
   3. **Notification Center (`Bell` Icon):**
      - Displays 4 live incident telemetry alerts categorized by severity (Critical, Major, Action Required, Auto-Triaged) with timestamp, root cause snippet, `Mark All Read` toggle, and direct link to the Live Triage Board.
   4. **Platform Help & Cheatsheet Popover (`HelpCircle`):**
-     - Displays engine runtime version (`ADK 2.8 • Gemini 2.5 Pro`), FastAPI daemon health, zero-trust write-lock status, and platform keyboard shortcuts (`⌘B`, `⌘K`, `Esc`).
+     - Displays engine runtime version (`Google ADK • Gemini 2.5 Pro`), FastAPI daemon health, zero-trust write-lock status, and platform keyboard shortcuts (`⌘B`, `⌘K`, `Esc`).
   5. **Platform Governance & Session Settings (`Settings`):**
      - Displays current dynamic environment, polling cadence (`30s`), and telemetry broker status with a direct link to the Environment Matrix Editor.
   6. **Engineer Identity & Delegated Authority Card (`User Avatar`):**
@@ -204,7 +204,7 @@ In [AutoTriageHub.jsx](file:///Users/kbk/Desktop/Prism/frontend/src/components/A
   - Designed as a platform-wide modal popup rather than a project tab. Accessible anywhere via the TopBar `Docs` button and Help popover.
   - Houses 6 comprehensive documentation categories:
     1. 🚀 **How to Use the App:** Step-by-step tour through Live Triage Board, Autonomous Investigation Stream, Action Proposal Authorization, and Project Setup Studio.
-    2. ⚙️ **How It Works:** Dual-loop autonomous architecture powered by Google ADK 2.8 on Gemini 2.5 Pro, Zero-Trust Tool Broker, and Open Knowledge Fabric (OKF v2.0).
+    2. ⚙️ **How It Works:** Dual-loop autonomous architecture powered by Google ADK on Gemini 2.5 Pro, Zero-Trust Tool Broker, and Open Knowledge Fabric (OKF v2.0).
     3. 💬 **How to Request & Prompt:** Inquiry guide with copyable prompt recipes for telemetry anomaly charts, database lock inspection, Kubernetes pod health, and executive RCA reports.
     4. 🔧 **Adding Tools & Connectors:** Python Tool Broker definitions, parameter schemas, read-only vs. action proposal governance, and `BaseConnector` implementations.
     5. 🌐 **Model Context Protocol (MCP):** Anthropic & Google ADK standard stdio/SSE transports, dynamic Gemini tool synthesis, and `mcp_config.json` specifications.

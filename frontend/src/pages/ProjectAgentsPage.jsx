@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Cpu,
   Zap,
@@ -20,97 +20,27 @@ import {
   ArrowUpRight,
   TrendingUp
 } from "lucide-react";
+import { fetchProjectAgents } from "../api/client";
 
 export function ProjectAgentsPage({ activeProject }) {
-  const projectKey = activeProject?.project_key || "BILLING";
+  const projectKey = activeProject?.project_key || "";
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationOutput, setSimulationOutput] = useState(null);
+  const [agents, setAgents] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [agents, setAgents] = useState([
-    {
-      id: "agent-01",
-      name: "Billing & Payment Triage Agent",
-      role: "Lead Investigator",
-      model: "Gemini 2.5 Pro (ADK 2.8)",
-      status: "ACTIVE",
-      successRate: "96.4%",
-      executions24h: 1248,
-      avgLatency: "1.2s",
-      temperature: 0.15,
-      toolsCount: 6,
-      tools: ["PostgreSQL (billing_db)", "Datadog Logs API", "Stripe Webhook Inspector", "Kubernetes Pod Operator"],
-      description: "Deconstructs 504 gateway timeouts, correlates HikariCP connection pool starvation, and prepares verified remediation proposals.",
-      promptDirective: "You are the primary billing SRE triage agent. Investigate recurring subscription timeouts, inspect pg_stat_activity, and verify database pool constraints.",
-      lastActive: "2m ago"
-    },
-    {
-      id: "agent-02",
-      name: "Database Lock & Deadlock Analyzer",
-      role: "Database Specialist",
-      model: "Claude 3.5 Sonnet",
-      status: "ACTIVE",
-      successRate: "98.1%",
-      executions24h: 842,
-      avgLatency: "1.4s",
-      temperature: 0.1,
-      toolsCount: 4,
-      tools: ["PostgreSQL Admin Console", "pg_locks Inspector", "Query Plan Visualizer"],
-      description: "Detects circular row-level locks on orders_allocation tables and safely recommends session termination or index patching.",
-      promptDirective: "Analyze blocking and blocked PIDs. Identify circular lock dependencies and recommend deterministic key sorting to eliminate deadlocks.",
-      lastActive: "15m ago"
-    },
-    {
-      id: "agent-03",
-      name: "Auth & IAM Edge Sentinel",
-      role: "Security & Gateway",
-      model: "GPT-4o",
-      status: "ACTIVE",
-      successRate: "94.8%",
-      executions24h: 620,
-      avgLatency: "0.9s",
-      temperature: 0.2,
-      toolsCount: 5,
-      tools: ["Envoy Edge Telemetry", "Elasticsearch Central Logs", "JWKS HTTP Probe"],
-      description: "Correlates 401 Unauthorized spikes on API Gateway to JWKS public key cache expiration and thundering herd storms.",
-      promptDirective: "Inspect Envoy proxy latency for OAuth2 token validation. Trace certificate rotation failures and recommend TTL tuning.",
-      lastActive: "45m ago"
-    },
-    {
-      id: "agent-04",
-      name: "Kubernetes Cluster Auto-Healer",
-      role: "Infrastructure SRE",
-      model: "Gemini 2.5 Flash",
-      status: "STANDBY",
-      successRate: "99.2%",
-      executions24h: 312,
-      avgLatency: "0.8s",
-      temperature: 0.1,
-      toolsCount: 8,
-      tools: ["kubectl get/describe", "Prometheus Core Metrics", "K8s Event Stream"],
-      description: "Monitors CrashLoopBackOff and OOMKilled worker pods. Synthesizes memory limits adjustments and stages pod restart proposals.",
-      promptDirective: "Validate pod container exit codes. Check for OOMKilled (code 137). Propose horizontal scaling or ConfigMap memory bumps.",
-      lastActive: "1h ago"
-    },
-    {
-      id: "agent-05",
-      name: "Notification Queue Balancer",
-      role: "Dispatch Specialist",
-      model: "Claude 3.5 Haiku",
-      status: "ACTIVE",
-      successRate: "95.0%",
-      executions24h: 512,
-      avgLatency: "1.1s",
-      temperature: 0.2,
-      toolsCount: 4,
-      tools: ["Redis Queue Inspector", "SendGrid Status API", "AWS SES Client"],
-      description: "Tracks queue backlog exceeding SLA thresholds. Fails over transactional email routing from SendGrid to AWS SES fallback.",
-      promptDirective: "Monitor transactional email queues. When SendGrid returns HTTP 429, execute emergency reroute to secondary AWS SES pool.",
-      lastActive: "3h ago"
-    }
-  ]);
+  useEffect(() => {
+    if (!activeProject?.id) return;
+    setIsLoading(true);
+    fetchProjectAgents(activeProject.id)
+      .then((data) => setAgents(Array.isArray(data) ? data : []))
+      .catch((err) => console.warn("Failed to load agents:", err))
+      .finally(() => setIsLoading(false));
+  }, [activeProject?.id]);
+
 
   const toggleAgentStatus = (id) => {
     setAgents((prev) =>
@@ -205,8 +135,8 @@ export function ProjectAgentsPage({ activeProject }) {
               <span style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink-tertiary)", textTransform: "uppercase" }}>
                 {projectKey} • BUILD
               </span>
-              <span className="badge badge-teal">5 Autonomous Agents Online</span>
-              <span className="badge badge-magenta">ADK 2.8 Engine</span>
+              <span className="badge badge-teal">{agents.filter(a => a.status === 'ACTIVE').length} Autonomous Agents Online</span>
+              <span className="badge badge-magenta">Google ADK Engine</span>
             </div>
             <h1 style={{ fontSize: "20px", fontWeight: 700, color: "var(--ink-primary)", marginTop: "4px" }}>
               Autonomous SRE Agents Fleet
@@ -219,8 +149,8 @@ export function ProjectAgentsPage({ activeProject }) {
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <button
-            onClick={() => handleSimulateRun(agents[0])}
-            disabled={isSimulating}
+            onClick={() => agents[0] && handleSimulateRun(agents[0])}
+            disabled={isSimulating || agents.length === 0}
             className="btn-primary"
             style={{ gap: "6px" }}
           >
@@ -243,20 +173,28 @@ export function ProjectAgentsPage({ activeProject }) {
         <div className="prism-card" style={{ padding: "14px 18px", background: "var(--bg-card)" }}>
           <div style={{ fontSize: "11.5px", color: "var(--ink-tertiary)", fontWeight: 600 }}>24h Executions</div>
           <div style={{ fontSize: "22px", fontWeight: 800, color: "var(--prism-pink)", marginTop: "4px" }}>
-            {agents.reduce((acc, a) => acc + a.executions24h, 0).toLocaleString()}
+            {agents.reduce((acc, a) => acc + (a.executions24h || 0), 0).toLocaleString()}
           </div>
           <div style={{ fontSize: "11.5px", color: "var(--ink-secondary)", marginTop: "2px" }}>Autonomous investigation steps</div>
         </div>
 
         <div className="prism-card" style={{ padding: "14px 18px", background: "var(--bg-card)" }}>
           <div style={{ fontSize: "11.5px", color: "var(--ink-tertiary)", fontWeight: 600 }}>Mean Accuracy</div>
-          <div style={{ fontSize: "22px", fontWeight: 800, color: "var(--accent-teal)", marginTop: "4px" }}>96.7%</div>
+          <div style={{ fontSize: "22px", fontWeight: 800, color: "var(--accent-teal)", marginTop: "4px" }}>
+            {agents.length > 0
+              ? `${(agents.reduce((acc, a) => acc + (parseFloat(a.successRate) || 0), 0) / agents.length).toFixed(1)}%`
+              : "—"}
+          </div>
           <div style={{ fontSize: "11.5px", color: "var(--ink-secondary)", marginTop: "2px" }}>RCA confirmed by human SREs</div>
         </div>
 
         <div className="prism-card" style={{ padding: "14px 18px", background: "var(--bg-card)" }}>
           <div style={{ fontSize: "11.5px", color: "var(--ink-tertiary)", fontWeight: 600 }}>Average Latency</div>
-          <div style={{ fontSize: "22px", fontWeight: 800, color: "var(--accent-violet)", marginTop: "4px" }}>1.1s</div>
+          <div style={{ fontSize: "22px", fontWeight: 800, color: "var(--accent-violet)", marginTop: "4px" }}>
+            {agents.length > 0
+              ? `${(agents.reduce((acc, a) => acc + (parseFloat(a.avgLatency) || 0), 0) / agents.length).toFixed(2)}s`
+              : "—"}
+          </div>
           <div style={{ fontSize: "11.5px", color: "var(--ink-secondary)", marginTop: "2px" }}>Across all model inferences</div>
         </div>
       </div>
@@ -297,6 +235,20 @@ export function ProjectAgentsPage({ activeProject }) {
       </div>
 
       {/* Agents Grid */}
+      {isLoading ? (
+        <div style={{ padding: "40px", textAlign: "center", color: "var(--ink-secondary)" }}>
+          <RotateCw size={24} className="spin" style={{ margin: "0 auto 12px" }} />
+          <div>Loading autonomous agents...</div>
+        </div>
+      ) : filteredAgents.length === 0 ? (
+        <div className="prism-card" style={{ padding: "48px", textAlign: "center", background: "var(--bg-card)", border: "1px solid var(--border-card)" }}>
+          <Cpu size={36} color="var(--ink-tertiary)" style={{ margin: "0 auto 12px" }} />
+          <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink-primary)" }}>No Agents Configured</h3>
+          <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "4px" }}>
+            No autonomous agents or skill bindings found for this project.
+          </p>
+        </div>
+      ) : (
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "16px" }}>
         {filteredAgents.map((agent) => (
           <div
@@ -382,6 +334,7 @@ export function ProjectAgentsPage({ activeProject }) {
           </div>
         ))}
       </div>
+      )}
 
       {/* Simulation Result Drawer / Modal */}
       {simulationOutput && selectedAgent && (

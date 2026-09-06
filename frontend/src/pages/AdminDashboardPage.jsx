@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Users, 
   Layers, 
@@ -11,42 +11,139 @@ import {
   AlertTriangle, 
   Database,
   ArrowUpRight,
-  Sparkles
+  Sparkles,
+  RotateCw
 } from "lucide-react";
+import { fetchAdminDashboard } from "../api/client";
+import { useAdminSync } from "../context/AdminSyncContext";
+
+// Utility: normalise service status string → colour token
+function statusColor(status = "") {
+  const s = status.toUpperCase();
+  if (s === "HEALTHY" || s === "OPERATIONAL") return "var(--accent-teal)";
+  if (s === "DEGRADED" || s === "WARN") return "var(--accent-amber)";
+  return "var(--accent-rose)";
+}
+
+// Utility: relative time from ISO string
+function relativeTime(isoStr) {
+  if (!isoStr) return "just now";
+  const diffMs = Date.now() - new Date(isoStr).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
 
 export function AdminDashboardPage() {
+  const [data, setData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadData = () => {
+    fetchAdminDashboard()
+      .then((d) => { if (d && !d.error) setData(d); })
+      .catch((err) => console.warn("Dashboard fetch failed:", err))
+      .finally(() => setIsLoading(false));
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  useAdminSync(() => {
+    loadData();
+  });
+
+  // ── Stats row (measured data) ──────────────────────
+  const s = data?.stats || {};
   const stats = [
-    { label: "Total Users", value: "1,248", change: "↑ 12.5% vs last 7 days", icon: Users, color: "var(--prism-pink)" },
-    { label: "Active Projects", value: "56", change: "↑ 8.3% vs last 7 days", icon: Layers, color: "var(--accent-teal)" },
-    { label: "Active Agents", value: "128", change: "↑ 16.7% vs last 7 days", icon: Cpu, color: "var(--accent-violet)" },
-    { label: "Total Executions", value: "24.5K", change: "↑ 18.9% vs last 7 days", icon: PlayCircle, color: "var(--accent-amber)" },
-    { label: "System Uptime", value: "99.98%", change: "↑ 0.02% vs last 7 days", icon: ShieldCheck, color: "var(--accent-teal)" },
+    {
+      label: "Total Users",
+      value: s.totalUsersDisplay || "—",
+      change: s.newUsersWeek != null ? `↑ ${s.newUsersWeek} new this week` : "Loading…",
+      icon: Users, color: "var(--prism-pink)"
+    },
+    {
+      label: "Active Projects",
+      value: s.activeProjects != null ? String(s.activeProjects) : "—",
+      change: s.newProjectsWeek != null ? `↑ ${s.newProjectsWeek} new this week` : "Loading…",
+      icon: Layers, color: "var(--accent-teal)"
+    },
+    {
+      label: "Active Agents",
+      value: s.totalAgents != null ? String(s.totalAgents) : "—",
+      change: s.newAgentsWeek != null ? `↑ ${s.newAgentsWeek} new this week` : "Loading…",
+      icon: Cpu, color: "var(--accent-violet)"
+    },
+    {
+      label: "Total Executions",
+      value: s.totalRunsDisplay || "—",
+      change: s.runsWeek != null ? `↑ ${s.runsWeek} this week` : "Loading…",
+      icon: PlayCircle, color: "var(--accent-amber)"
+    },
+    {
+      label: "Healthy Services",
+      value: s.healthyServicesPct != null ? `${s.healthyServicesPct}%` : "—",
+      change: s.healthStatus || (isLoading ? "Checking…" : "Unavailable"),
+      icon: ShieldCheck, color: "var(--accent-teal)"
+    },
   ];
 
-  const healthServices = [
-    { name: "API Gateway", status: "Operational", color: "var(--accent-teal)" },
-    { name: "PostgreSQL Database", status: "Operational", color: "var(--accent-teal)" },
-    { name: "Redis Cache", status: "Operational", color: "var(--accent-teal)" },
-    { name: "Object Storage (S3)", status: "Operational", color: "var(--accent-teal)" },
-    { name: "Vector Database (Pinecone)", status: "Operational", color: "var(--accent-teal)" },
-    { name: "Message Queue (Kafka)", status: "Operational", color: "var(--accent-teal)" },
-    { name: "Notification Service", status: "Operational", color: "var(--accent-teal)" }
-  ];
+  // ── Health services (live) ────────────────────────────────────────────
+  const healthServices = (data?.healthServices || []).map((svc) => ({
+    name: svc.name,
+    status: svc.status,
+    color: statusColor(svc.status),
+  }));
 
-  const systemAlerts = [
-    { title: "High error rate in AI Service", location: "AI Service • us-east-1", time: "2m ago", severity: "Critical" },
-    { title: "Database replication lag", location: "Primary • us-east-1", time: "15m ago", severity: "High" },
-    { title: "Rate limit nearing on Provider", location: "Model Provider • us-east-1", time: "1h ago", severity: "Medium" },
-    { title: "Upcoming maintenance window", location: "May 20, 02:00 - 04:00 UTC", time: "2h ago", severity: "Info" },
-  ];
+  // ── Recent alerts from audit feed (live) ─────────────────────────────
+  const severityForAction = (action = "") => {
+    const a = action.toUpperCase();
+    if (a.includes("FAIL") || a.includes("ERROR") || a.includes("BREACH")) return "Critical";
+    if (a.includes("WARN") || a.includes("LIMIT") || a.includes("LAG")) return "High";
+    if (a.includes("ROTATE") || a.includes("UPDATED")) return "Medium";
+    return "Info";
+  };
+  const systemAlerts = (data?.recentAuditFeed || []).slice(0, 4).map((e) => ({
+    title: e.action.replace(/_/g, " "),
+    location: e.resource || "system",
+    time: relativeTime(e.occurred_at),
+    severity: severityForAction(e.action),
+  }));
 
-  const providers = [
-    { name: "OpenAI (GPT-4o)", requests: "12.4K", pct: 42, color: "var(--prism-magenta)" },
-    { name: "Google (Gemini 2.5 Pro)", requests: "6.7K", pct: 23, color: "var(--accent-violet)" },
-    { name: "Anthropic (Claude 3.5)", requests: "4.6K", pct: 16, color: "var(--accent-teal)" },
-    { name: "Azure OpenAI", requests: "3.2K", pct: 11, color: "var(--accent-amber)" },
-    { name: "Local LLM / vLLM", requests: "1.6K", pct: 6, color: "var(--ink-secondary)" },
+  // ── Model provider usage (live) ───────────────────────────────────────
+  const PROVIDER_COLORS = [
+    "var(--prism-magenta)",
+    "var(--accent-violet)",
+    "var(--accent-teal)",
+    "var(--accent-amber)",
+    "var(--ink-secondary)",
   ];
+  const providers = (data?.modelProviderBreakdown || []).map((p, i) => ({
+    name: p.name,
+    requests: p.tokens,
+    pct: p.sharePct,
+    color: PROVIDER_COLORS[i % PROVIDER_COLORS.length],
+  }));
+
+  // ── Execution trend for SVG sparkline ────────────────────────────────
+  const trend = data?.executionTrend || [];
+  const trendMax = data?.trendMax || 1;
+
+  // Map trend into SVG path points (600 wide, 180 tall)
+  const svgPoints = trend.map((d, i) => {
+    const x = trend.length > 1 ? (i / (trend.length - 1)) * 600 : 300;
+    const y = 180 - ((d.count / trendMax) * 155 + 10);
+    return { x, y, label: d.date, count: d.count };
+  });
+  const pathD = svgPoints.length > 1
+    ? `M ${svgPoints.map((p) => `${p.x} ${p.y}`).join(" L ")}`
+    : "M 0 90 L 600 90";
+  const areaD = svgPoints.length > 1
+    ? `${pathD} L ${svgPoints[svgPoints.length - 1].x} 180 L 0 180 Z`
+    : "M 0 90 L 600 90 L 600 180 L 0 180 Z";
 
   return (
     <div style={{
@@ -55,7 +152,8 @@ export function AdminDashboardPage() {
       flexDirection: "column",
       gap: "24px",
       overflowY: "auto",
-      height: "calc(100vh - 64px)"
+      minHeight: "100%",
+      boxSizing: "border-box"
     }}>
       {/* Framework Page Hero Card */}
       <div
@@ -82,7 +180,8 @@ export function AdminDashboardPage() {
               alignItems: "center",
               justifyContent: "center",
               color: "#fff",
-              boxShadow: "0 0 18px var(--prism-glow)"
+              boxShadow: "0 0 18px var(--prism-glow)",
+              flexShrink: 0
             }}
           >
             <Activity size={24} />
@@ -91,10 +190,10 @@ export function AdminDashboardPage() {
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
               <span style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink-tertiary)", textTransform: "uppercase" }}>
-                PLATFORM CONTROL PLANE
+                PLATFORM ADMIN • LIVE OPERATIONS
               </span>
-              <span className="badge badge-teal">Fleet Health: 99.98%</span>
-              <span className="badge badge-magenta">56 Active Projects</span>
+              <span className="badge badge-teal">Fleet Health: {isLoading ? "…" : s.healthyServicesPct != null ? `${s.healthyServicesPct}%` : "Unavailable"}</span>
+              <span className="badge badge-magenta">{s.activeProjects ?? "…"} Active Projects</span>
             </div>
             <h1 style={{ fontSize: "20px", fontWeight: 700, color: "var(--ink-primary)", marginTop: "4px" }}>
               Enterprise Admin Dashboard
@@ -154,37 +253,39 @@ export function AdminDashboardPage() {
             <span className="mono badge badge-magenta">Last 7 days</span>
           </div>
 
-          {/* SVG Smooth Curves Graphic */}
+          {/* SVG Live Trend Sparkline */}
           <div style={{ height: "180px", width: "100%", position: "relative" }}>
-            <svg width="100%" height="100%" viewBox="0 0 600 180" preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="usageGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#ec4899" stopOpacity="0.3" />
-                  <stop offset="100%" stopColor="#ec4899" stopOpacity="0.0" />
-                </linearGradient>
-              </defs>
-              <line x1="0" y1="35" x2="600" y2="35" stroke="var(--border-subtle)" strokeDasharray="3 3" />
-              <line x1="0" y1="70" x2="600" y2="70" stroke="var(--border-subtle)" strokeDasharray="3 3" />
-              <line x1="0" y1="105" x2="600" y2="105" stroke="var(--border-subtle)" strokeDasharray="3 3" />
-              <line x1="0" y1="140" x2="600" y2="140" stroke="var(--border-subtle)" strokeDasharray="3 3" />
-
-              <path d="M 0 130 Q 100 60, 200 90 T 350 40 T 450 70 T 600 45 L 600 180 L 0 180 Z" fill="url(#usageGrad)" />
-              <path d="M 0 130 Q 100 60, 200 90 T 350 40 T 450 70 T 600 45" fill="none" stroke="#ec4899" strokeWidth="2.5" />
-
-              <circle cx="200" cy="90" r="4" fill="#ec4899" />
-              <circle cx="350" cy="40" r="4" fill="#ec4899" />
-              <circle cx="450" cy="70" r="4" fill="#ec4899" />
-            </svg>
+            {isLoading ? (
+              <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--ink-tertiary)", fontSize: "12px", gap: "8px" }}>
+                <RotateCw size={14} className="spin" /> Loading trend data…
+              </div>
+            ) : (
+              <svg width="100%" height="100%" viewBox="0 0 600 180" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="usageGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#ec4899" stopOpacity="0.35" />
+                    <stop offset="100%" stopColor="#ec4899" stopOpacity="0.0" />
+                  </linearGradient>
+                </defs>
+                <line x1="0" y1="35" x2="600" y2="35" stroke="var(--border-subtle)" strokeDasharray="3 3" />
+                <line x1="0" y1="70" x2="600" y2="70" stroke="var(--border-subtle)" strokeDasharray="3 3" />
+                <line x1="0" y1="105" x2="600" y2="105" stroke="var(--border-subtle)" strokeDasharray="3 3" />
+                <line x1="0" y1="140" x2="600" y2="140" stroke="var(--border-subtle)" strokeDasharray="3 3" />
+                {svgPoints.length > 0 && (
+                  <>
+                    <path d={areaD} fill="url(#usageGrad)" />
+                    <path d={pathD} fill="none" stroke="#ec4899" strokeWidth="2.5" strokeLinejoin="round" />
+                    {svgPoints.map((pt, i) => (
+                      <circle key={i} cx={pt.x} cy={pt.y} r="4" fill="#ec4899" />
+                    ))}
+                  </>
+                )}
+              </svg>
+            )}
           </div>
 
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10.5px", color: "var(--ink-tertiary)", borderTop: "1px solid var(--border-subtle)", paddingTop: "8px" }}>
-            <span>May 12</span>
-            <span>May 13</span>
-            <span>May 14</span>
-            <span>May 15</span>
-            <span>May 16</span>
-            <span>May 17</span>
-            <span>May 18</span>
+            {trend.map((d, i) => <span key={i}>{d.date}</span>)}
           </div>
         </div>
 
@@ -196,8 +297,8 @@ export function AdminDashboardPage() {
             {healthServices.map((svc) => (
               <div key={svc.name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "11.5px" }}>
                 <span style={{ color: "var(--ink-primary)" }}>{svc.name}</span>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", color: "var(--accent-teal)", fontWeight: "600" }}>
-                  <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "var(--accent-teal)" }} />
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", color: svc.color, fontWeight: "600" }}>
+                  <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: svc.color }} />
                   {svc.status}
                 </span>
               </div>
@@ -247,14 +348,14 @@ export function AdminDashboardPage() {
               <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#8b7dff" strokeWidth="3.8" strokeDasharray="25, 100" strokeDashoffset="-50" />
             </svg>
             <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-              <span className="mono" style={{ fontSize: "18px", fontWeight: "800", color: "var(--ink-primary)" }}>56</span>
+              <span className="mono" style={{ fontSize: "18px", fontWeight: "800", color: "var(--ink-primary)" }}>{s.totalProjects ?? "—"}</span>
               <span style={{ fontSize: "9px", color: "var(--ink-tertiary)" }}>Total Projects</span>
             </div>
           </div>
 
           <div style={{ width: "100%", display: "flex", justifyContent: "space-around", fontSize: "11px" }}>
-            <span style={{ color: "var(--accent-teal)" }}>• Active 28 (50%)</span>
-            <span style={{ color: "var(--accent-violet)" }}>• In Dev 14 (25%)</span>
+            <span style={{ color: "var(--accent-teal)" }}>• Active {s.activeProjects ?? "—"} ({s.totalProjects ? Math.round((s.activeProjects / s.totalProjects) * 100) : 0}%)</span>
+            <span style={{ color: "var(--accent-violet)" }}>• In Dev {s.devProjects ?? "—"} ({s.totalProjects ? Math.round((s.devProjects / s.totalProjects) * 100) : 0}%)</span>
           </div>
         </div>
 
@@ -288,20 +389,18 @@ export function AdminDashboardPage() {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {[
-              { action: "User role updated", user: "Sarah.Jones@company.com", time: "2m ago", role: "Admin" },
-              { action: "New project created", user: "Billing Intelligence", time: "10m ago", role: "System" },
-              { action: "Model provider added", user: "Anthropic Claude 3.5", time: "30m ago", role: "Admin" },
-              { action: "API key rotated", user: "OpenAI Provider Key", time: "1h ago", role: "System" },
-            ].map((log, i) => (
+            {(data?.recentAuditFeed || []).map((log, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "11px", padding: "6px 8px", background: "var(--thinking-bg)", border: "1px solid var(--border-subtle)", borderRadius: "6px" }}>
                 <div>
-                  <div style={{ color: "var(--ink-primary)", fontWeight: "600" }}>{log.action}</div>
-                  <div style={{ color: "var(--ink-tertiary)" }}>{log.user}</div>
+                  <div style={{ color: "var(--ink-primary)", fontWeight: "600" }}>{log.action.replace(/_/g, " ")}</div>
+                  <div style={{ color: "var(--ink-tertiary)" }}>{log.actor} • {log.resource}</div>
                 </div>
-                <div className="mono" style={{ color: "var(--ink-tertiary)" }}>{log.time}</div>
+                <div className="mono" style={{ color: "var(--ink-tertiary)" }}>{relativeTime(log.occurred_at)}</div>
               </div>
             ))}
+            {!isLoading && (!data?.recentAuditFeed || data.recentAuditFeed.length === 0) && (
+              <div style={{ color: "var(--ink-tertiary)", fontSize: "11.5px", textAlign: "center", padding: "12px" }}>No audit events yet</div>
+            )}
           </div>
         </div>
       </div>

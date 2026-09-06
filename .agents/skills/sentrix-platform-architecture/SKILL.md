@@ -366,7 +366,7 @@ When the autonomous agent processes an inquiry, instead of static loading text, 
 - **Platform-Level Modal Popup:** Documentation is treated as a global platform resource rather than a project tab. It opens as an interactive glassmorphic modal popup from anywhere on the platform (via the TopBar `Docs` button or Help popover) without displacing active investigation chat or triage sessions.
 - **6 Comprehensive Documentation Aspects:**
   1. 🚀 **How to Use the App:** Step-by-step tour through Live Triage Board, Autonomous Investigation Stream, Action Proposal Authorization, and Project Setup Studio.
-  2. ⚙️ **How It Works:** Dual-loop autonomous architecture powered by Google ADK 2.8 on Gemini 2.5 Pro, Zero-Trust Tool Broker, and Open Knowledge Fabric (OKF v2.0).
+  2. ⚙️ **How It Works:** Dual-loop autonomous architecture powered by Google ADK on Gemini 2.5 Pro, Zero-Trust Tool Broker, and Open Knowledge Fabric (OKF v2.0).
   3. 💬 **How to Request & Prompt:** Inquiry guide with copyable prompt recipes for telemetry anomaly charts, database lock inspection, Kubernetes pod health, and executive RCA reports.
   4. 🔧 **Adding Tools & Connectors:** Python Tool Broker definitions, parameter schemas, read-only vs. action proposal governance, and `BaseConnector` implementations.
   5. 🌐 **Model Context Protocol (MCP):** Native stdio and SSE server integration, dynamic Gemini tool synthesis, and `mcp_config.json` specifications.

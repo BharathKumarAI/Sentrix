@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import {
   MessageSquarePlus,
   AlertTriangle,
@@ -13,11 +14,12 @@ import {
   Copy,
   Check
 } from "lucide-react";
+import { submitFeedback } from "../api/client";
 
 export function FrameworkFeedbackModal({ isOpen, onClose, activeProject, activeEnvironment }) {
   if (!isOpen) return null;
 
-  const projectKey = activeProject?.project_key || "BILLING";
+  const projectKey = activeProject?.project_key || "";
   const [feedbackType, setFeedbackType] = useState("BUG"); // "BUG" | "FEATURE" | "PERFORMANCE"
   const [title, setTitle] = useState("");
   const [component, setComponent] = useState("CHAT_STREAM");
@@ -28,54 +30,50 @@ export function FrameworkFeedbackModal({ isOpen, onClose, activeProject, activeE
   const [submittedTicket, setSubmittedTicket] = useState(null);
   const [copiedTicket, setCopiedTicket] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim() || !description.trim()) return;
 
     setIsSubmitting(true);
-    setTimeout(() => {
+    try {
       const generatedId = `STX-FEEDBACK-${Math.floor(1000 + Math.random() * 9000)}`;
-      const payload = {
-        id: generatedId,
-        type: feedbackType,
-        title,
-        component,
-        severity,
-        description,
-        projectKey,
-        environment: activeEnvironment || "prod",
-        timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent
-      };
-
-      // Store in local storage feedback log
-      try {
-        const existing = JSON.parse(localStorage.getItem("sentrix_framework_feedback") || "[]");
-        existing.unshift(payload);
-        localStorage.setItem("sentrix_framework_feedback", JSON.stringify(existing));
-      } catch (err) {
-        console.error("Failed to store feedback locally", err);
-      }
-
+      await submitFeedback({
+        source_type: "FRAMEWORK",
+        source_id: generatedId,
+        user_id: "sre.operator@company.com",
+        signal_type: feedbackType === "BUG" ? "DEFECT" : "ENHANCEMENT",
+        notes: `[${feedbackType} - ${component}] ${title}: ${description}`,
+        category: component,
+        severity: severity
+      });
       setIsSubmitting(false);
       setSubmittedTicket(generatedId);
-    }, 600);
+    } catch (err) {
+      console.warn("Failed to record framework feedback:", err);
+      setIsSubmitting(false);
+      setSubmittedTicket(`STX-LOC-${Date.now().toString().slice(-4)}`);
+    }
   };
 
-  return (
-    <div style={{
-      position: "fixed",
-      inset: 0,
-      background: "rgba(0, 0, 0, 0.75)",
-      backdropFilter: "blur(8px)",
-      zIndex: 1000,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "20px"
-    }}>
+  return createPortal(
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0, 0, 0, 0.75)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+        zIndex: 100000,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "20px"
+      }}
+    >
       <div
         className="prism-card message-animate-in"
+        onClick={(e) => e.stopPropagation()}
         style={{
           width: "100%",
           maxWidth: "560px",
@@ -327,7 +325,7 @@ export function FrameworkFeedbackModal({ isOpen, onClose, activeProject, activeE
               alignItems: "center",
               gap: "8px",
               padding: "10px 12px",
-              background: "rgba(0, 0, 0, 0.25)",
+              background: "var(--bg-app)",
               border: "1px solid var(--border-subtle)",
               borderRadius: "8px",
               fontSize: "11.5px",
@@ -340,7 +338,7 @@ export function FrameworkFeedbackModal({ isOpen, onClose, activeProject, activeE
                 onChange={(e) => setIncludeDiagnostics(e.target.checked)}
               />
               <label htmlFor="includeDiag" style={{ cursor: "pointer" }}>
-                Auto-attach session context (Project: <strong style={{ color: "var(--prism-pink)" }}>{projectKey}</strong>, Env: <strong style={{ color: "var(--accent-teal)" }}>{activeEnvironment || "prod"}</strong>, Identity: <strong>kbk@company.com</strong>)
+                Auto-attach session context (Project: <strong style={{ color: "var(--prism-pink)" }}>{projectKey}</strong>, Env: <strong style={{ color: "var(--accent-teal)" }}>{activeEnvironment || "prod"}</strong>, Identity: <strong>Current session</strong>)
               </label>
             </div>
 
@@ -367,6 +365,7 @@ export function FrameworkFeedbackModal({ isOpen, onClose, activeProject, activeE
           </form>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

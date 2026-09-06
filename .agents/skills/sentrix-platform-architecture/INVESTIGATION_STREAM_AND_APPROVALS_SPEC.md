@@ -17,7 +17,7 @@ An autonomous investigation stream is initiated through one of three pathways:
 └───────────┬─────────────┘
             ▼
 ┌─────────────────────────┐
-│ Autonomous SRE Runtime  │ (ADK 2.8 Engine)
+│ Autonomous SRE Runtime  │ (Google ADK Engine)
 └───────────┬─────────────┘
             ├──────────────────────────┐
             ▼                          ▼

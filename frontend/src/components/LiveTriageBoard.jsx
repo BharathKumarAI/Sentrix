@@ -47,359 +47,18 @@ export function LiveTriageBoard({ activeProject, activeEnvironment }) {
   const [viewMode, setViewMode] = useState("kanban"); // "kanban" | "teamwise" | "comments_evidence"
   const [copiedEvidenceId, setCopiedEvidenceId] = useState(null);
 
-  const projectKey = activeProject?.project_key || "BILLING";
-
-  // Fallback initial tickets
-  const defaultTickets = [
-    {
-      id: "1",
-      key: "BILL-1049",
-      title: "Payment gateway timeout on recurring charges",
-      description: "Cascading 504 Gateway Timeouts observed on /v1/webhooks/charges during recurring subscription billing run.",
-      status: "incoming",
-      priority: "P1",
-      confidence: 96,
-      service: "Payment Ledger & Webhooks",
-      assignedTeam: "Payments Core Team",
-      suggestedFixTeam: "Payments Core Team",
-      reporter: "PagerDuty / AlertManager",
-      time: "4m ago",
-      autoTriaged: true,
-      triageSummary: "Root Cause: HikariCP connection pool exhausted on billing-db-primary due to unindexed batch lock in /v1/webhooks/charges.",
-      suggestions: [
-        "Increase HikariCP pool limit from 20 to 50 on billing-webhook-worker.",
-        "Apply missing index on billing_transactions(account_id, settlement_status).",
-        "Enable Circuit Breaker fallback on Stripe webhook retry consumer queue."
-      ],
-      okfReferences: [
-        {"id": "OKF-RUN-402", "title": "HikariCP Connection Pool Starvation Runbook", "source": "Sentrix SRE Runbooks"},
-        {"id": "OKF-ARCH-110", "title": "Stripe Webhook Idempotency & Batching Guidelines", "source": "Engineering Confluence"}
-      ],
-      queries: [
-        {
-          "id": "q1",
-          "type": "SQL",
-          "tool": "PostgreSQL Primary (billing_db)",
-          "query": "SELECT datname, count(*), state FROM pg_stat_activity WHERE datname = 'billing_ledger' GROUP BY datname, state;",
-          "description": "Inspect active vs idle connections in billing database pool"
-        },
-        {
-          "id": "q2",
-          "type": "LOGS",
-          "tool": "Datadog Logs API",
-          "query": "service:billing-webhook status:error \"PoolAcquireTimeoutException\" | stats count by host",
-          "description": "Trace HikariCP pool acquisition timeouts across worker pods"
-        },
-        {
-          "id": "q3",
-          "type": "KUBERNETES",
-          "tool": "Kubernetes Cluster Operator",
-          "query": "kubectl get pods -n billing -l app=billing-webhook-worker -o wide",
-          "description": "Verify container health, restarts, and memory utilization"
-        }
-      ],
-      comments: [
-        {
-          "id": "c1",
-          "author": "Sarah K.",
-          "role": "Staff SRE",
-          "team": "Payments Core Team",
-          "avatar": "SK",
-          "time": "6m ago",
-          "text": "Tested pool scale to 50 on staging-billing-db. Zero 504 timeouts observed under 2,000 req/sec load test. Hot-patch PR #419 is ready for review."
-        },
-        {
-          "id": "c2",
-          "author": "Sentrix Agent",
-          "role": "Autonomous Triage",
-          "team": "AI SRE",
-          "avatar": "AI",
-          "time": "8m ago",
-          "text": "Autonomous triage verified pool starvation pattern. Generated 3 diagnostic queries and correlated 1,420 gateway error events."
-        }
-      ],
-      evidence: [
-        {
-          "id": "ev-101",
-          "title": "HikariCP Connection Pool Saturation Telemetry",
-          "source": "PostgreSQL Primary (billing_db)",
-          "type": "METRIC_TRACE",
-          "sha256": "8f3b20c9a28114f2e7b1a92bc7190",
-          "time": "6m ago",
-          "summary": "20/20 active connections saturated for >180s. 42 threads waiting in LockAcquire.",
-          "payload": "PoolAcquireTimeoutException: Connection to PostgreSQL timed out after 30000ms.\nActive conns: 20/20\nThreads waiting: 42"
-        },
-        {
-          "id": "ev-102",
-          "title": "Stripe Webhook 504 Error Rate Surge",
-          "source": "Datadog Logs API",
-          "type": "LOG_BURST",
-          "sha256": "4b771e129cf8019a12bc780a112df",
-          "time": "8m ago",
-          "summary": "1,420 504 Gateway Timeouts recorded on /v1/webhooks/charges over 5 minutes.",
-          "payload": "service:billing-webhook status:504 count:1420 host:billing-worker-prod-02"
-        }
-      ],
-      liveActivity: "⚡ AI Auto-triage generated 3 diagnostic queries • Ready for SRE review",
-      teamActivity: [
-        { time: "4m ago", user: "Sarah K. (Payments)", action: "Tested pool scale to 50 on staging; submitted PR #419" },
-        { time: "6m ago", user: "Sentrix Agent", action: "Auto-triage completed with 96% confidence" }
-      ]
-    },
-    {
-      id: "2",
-      key: "AUTH-2091",
-      title: "Auth token signature verification latency spike",
-      description: "Intermittent 401 Unauthorized errors on API gateway. JWKS signature key verification timing out.",
-      status: "auto",
-      priority: "P2",
-      confidence: 88,
-      service: "OAuth2 / IAM Edge",
-      assignedTeam: "Identity & Security Team",
-      suggestedFixTeam: "Identity & Security Team",
-      reporter: "CloudWatch Latency Monitor",
-      time: "12m ago",
-      autoTriaged: true,
-      triageSummary: "Root Cause: JWKS certificate cache expiry policy caused simultaneous cache misses across 16 API gateway instances.",
-      suggestions: [
-        "Hot-patch JWKS cache TTL from 60s to 3600s with background refresh-ahead.",
-        "Pre-warm JWT public key keystore on Envoy edge proxy memory."
-      ],
-      okfReferences: [
-        {"id": "OKF-SEC-109", "title": "JWKS Edge Caching & Thundering Herd Prevention", "source": "Security RFC"}
-      ],
-      queries: [
-        {
-          "id": "q1",
-          "type": "LOGS",
-          "tool": "Elasticsearch Central Logs",
-          "query": "index=api_gateway \"JWKS fetch timeout\" | timechart count span=1m by cluster",
-          "description": "Histogram of JWKS key retrieval timeouts on API edge"
-        }
-      ],
-      comments: [
-        {
-          "id": "c1",
-          "author": "David L.",
-          "role": "Security Architect",
-          "team": "Identity & Security Team",
-          "avatar": "DL",
-          "time": "10m ago",
-          "text": "Confirmed JWKS endpoint was getting thundering herd hits every 60s. We are pushing a hotfix config to increase cache TTL to 1 hour with stale-while-revalidate."
-        }
-      ],
-      evidence: [
-        {
-          "id": "ev-201",
-          "title": "Envoy JWKS Fetch Thundering Herd Latency Trace",
-          "source": "Elasticsearch Central Logs",
-          "type": "TRACE",
-          "sha256": "3c91aa8910482910fae8291047192",
-          "time": "11m ago",
-          "summary": "16 gateway instances made 480 parallel requests to internal JWKS keystore at expiry tick.",
-          "payload": "GET http://auth-internal.identity.svc:8080/.well-known/jwks.json\nHTTP 504 Gateway Timeout"
-        }
-      ],
-      liveActivity: "🔍 Analyzing JWKS keystore fetch telemetry across Envoy proxies",
-      teamActivity: [
-        { time: "10m ago", user: "David L. (Security)", action: "Confirmed thundering herd; staging 1h TTL hotfix" },
-        { time: "12m ago", user: "Sentrix Agent", action: "Correlating JWT error spikes with Envoy edge logs" }
-      ]
-    },
-    {
-      id: "3",
-      key: "DB-3030",
-      title: "Deadlock in orders_allocation lock queue",
-      description: "Lock wait timeout exceeded during high concurrency flash checkout run on order allocation tables.",
-      status: "pending",
-      priority: "P1",
-      confidence: 92,
-      service: "Inventory Fulfillment DB",
-      assignedTeam: "Database Infrastructure Team",
-      suggestedFixTeam: "Database Infrastructure Team",
-      reporter: "SRE On-Call (Sarah K.)",
-      time: "25m ago",
-      autoTriaged: true,
-      triageSummary: "Root Cause: Circular row-level lock sequence between order_items and inventory_reservation tables under concurrent checkout.",
-      suggestions: [
-        "Sort order item IDs deterministically before acquiring SELECT FOR UPDATE locks.",
-        "Kill blocked session PID 10482 to restore transaction flow."
-      ],
-      okfReferences: [
-        {"id": "OKF-DB-301", "title": "PostgreSQL Row-level Locking & Deadlock Resolution", "source": "Database Architecture"}
-      ],
-      queries: [
-        {
-          "id": "q1",
-          "type": "SQL",
-          "tool": "PostgreSQL Admin Console",
-          "query": "SELECT blocked_locks.pid AS blocked_pid, blocking_locks.pid AS blocking_pid, blocked_activity.query AS blocked_statement FROM pg_catalog.pg_locks blocked_locks JOIN pg_catalog.pg_stat_activity blocked_activity ON blocked_activity.pid = blocked_locks.pid JOIN pg_catalog.pg_locks blocking_locks ON blocking_locks.locktype = blocked_locks.locktype WHERE NOT blocked_locks.granted;",
-          "description": "Identify blocking and blocked database processes in PostgreSQL"
-        }
-      ],
-      comments: [
-        {
-          "id": "c1",
-          "author": "Marcus T.",
-          "role": "Principal DBA",
-          "team": "Database Infrastructure Team",
-          "avatar": "MT",
-          "time": "18m ago",
-          "text": "Terminated rogue blocked session PID 10482 via `SELECT pg_terminate_backend(10482);`. Lock wait queue cleared immediately."
-        }
-      ],
-      evidence: [
-        {
-          "id": "ev-301",
-          "title": "PostgreSQL pg_locks Deadlock Dependency Graph",
-          "source": "PostgreSQL Admin Console",
-          "type": "LOCK_GRAPH",
-          "sha256": "5f8290192a7182901a88290184910",
-          "time": "22m ago",
-          "summary": "Circular ExclusiveLock on relation orders between backend PID 10482 and PID 10512.",
-          "payload": "Process 10482 waits for ExclusiveLock on orders; blocked by 10512."
-        }
-      ],
-      liveActivity: "✅ Auto-triage complete • Pending SRE authorization to hand off to DB Team",
-      teamActivity: [
-        { time: "18m ago", user: "Marcus T. (DBA)", action: "Terminated blocking session PID 10482; queue normalized" },
-        { time: "22m ago", user: "Sentrix Agent", action: "Identified circular lock dependency in order allocation" }
-      ]
-    },
-    {
-      id: "4",
-      key: "NOTIF-501",
-      title: "Email delivery queue backlog exceeding SLA threshold",
-      description: "SendGrid SMTP relay returned 429 rate limit exceeded; customer transactional emails delayed by 45 minutes.",
-      status: "handoff",
-      priority: "P2",
-      confidence: 94,
-      service: "Notification Dispatcher",
-      assignedTeam: "Communications Team",
-      suggestedFixTeam: "Communications Team",
-      reporter: "Datadog Queue Monitor",
-      time: "1h ago",
-      autoTriaged: true,
-      triageSummary: "Root Cause: SendGrid subaccount hourly quota reached due to unthrottled password reset blast. Fallback AWS SES pool was not activated.",
-      suggestions: [
-        "Failover notification router to secondary AWS SES provider.",
-        "Request quota elevation with SendGrid enterprise support."
-      ],
-      okfReferences: [
-        {"id": "OKF-OPS-212", "title": "Multi-Vendor Email Relay Failover Procedure", "source": "Platform Ops Wiki"}
-      ],
-      queries: [
-        {
-          "id": "q1",
-          "type": "SQL",
-          "tool": "Redis Queue Inspector",
-          "query": "LLEN queues:notifications:transactional_email",
-          "description": "Check current backlog count in notification queue"
-        }
-      ],
-      comments: [
-        {
-          "id": "c1",
-          "author": "Alex Chen",
-          "role": "Lead Engineer",
-          "team": "Communications Team",
-          "avatar": "AC",
-          "time": "35m ago",
-          "text": "Switched traffic to AWS SES fallback pool. Drain rate is currently 450 emails/sec. Backlog expected to clear in 12 minutes."
-        }
-      ],
-      evidence: [
-        {
-          "id": "ev-401",
-          "title": "SendGrid 429 Rate Limit HTTP Response",
-          "source": "Datadog Queue Monitor",
-          "type": "HTTP_ERR",
-          "sha256": "91a82910fa892019482910fa82910",
-          "time": "50m ago",
-          "summary": "Hourly credit limit (100k/hr) reached. SendGrid rejected delivery with Retry-After: 3600.",
-          "payload": "HTTP/1.1 429 Too Many Requests\n{\"errors\": [{\"message\": \"Maximum credits exceeded for billing tier\"}]}"
-        }
-      ],
-      liveActivity: "🔄 Dispatched to Communications Team • Alex Chen currently addressing",
-      teamActivity: [
-        { time: "35m ago", user: "Alex Chen (Comms)", action: "Flipped notification router to AWS SES; queue draining" },
-        { time: "45m ago", user: "Sentrix Agent", action: "Transferred ticket from Triage to Communications Team" }
-      ]
-    },
-    {
-      id: "5",
-      key: "INFRA-880",
-      title: "Redis cluster node failover completed",
-      description: "Node redis-cluster-shard-02-b experienced OOM crash. Sentinel triggered failover to replica.",
-      status: "resolved",
-      priority: "P3",
-      confidence: 99,
-      service: "Session & Cache Grid",
-      assignedTeam: "Core Infrastructure",
-      suggestedFixTeam: "Core Infrastructure",
-      reporter: "K8s OOM Watcher",
-      time: "2h ago",
-      autoTriaged: true,
-      triageSummary: "Root Cause: Redis maxmemory policy was set to noeviction instead of allkeys-lru, causing process termination when RAM exceeded 16GB.",
-      suggestions: [
-        "Verified: Updated maxmemory-policy to allkeys-lru on Redis ConfigMap.",
-        "Telemetry confirmed: Memory stabilized at 62% capacity."
-      ],
-      okfReferences: [
-        {"id": "OKF-INF-104", "title": "Redis Memory Management & Eviction Policies", "source": "Sentrix Infra Runbooks"}
-      ],
-      queries: [
-        {
-          "id": "q1",
-          "type": "CLI",
-          "tool": "Redis CLI",
-          "query": "redis-cli -h redis-cluster info memory | grep -E \"used_memory_human|maxmemory_policy\"",
-          "description": "Verify Redis cluster memory usage and eviction policy"
-        }
-      ],
-      comments: [
-        {
-          "id": "c1",
-          "author": "Elena R.",
-          "role": "Infra SRE",
-          "team": "Core Infrastructure",
-          "avatar": "ER",
-          "time": "1h 15m ago",
-          "text": "ConfigMap updated in Helm values. Sentinel promoted replica shard-02-a to primary without packet loss. Memory stabilized at 9.8GB / 16GB."
-        }
-      ],
-      evidence: [
-        {
-          "id": "ev-501",
-          "title": "Redis Sentinel Failover Event Log",
-          "source": "K8s OOM Watcher",
-          "type": "SYS_LOG",
-          "sha256": "44a92019482910fa892019482910f",
-          "time": "1h 50m ago",
-          "summary": "+switch-master redis-cluster-shard-02 10.244.2.14 6379 10.244.3.18 6379.",
-          "payload": "1842:X 03 Sep 2026 10:14:22.812 # +sdown master redis-cluster-shard-02 10.244.2.14 6379"
-        }
-      ],
-      liveActivity: "✔️ Verified resolved • Cluster metrics healthy for 2 hours",
-      teamActivity: [
-        { time: "1h 15m ago", user: "Elena R. (Infra)", action: "Applied ConfigMap update with allkeys-lru policy" },
-        { time: "1h 30m ago", user: "Sentrix Agent", action: "Telemetry verification passed (Zero errors for 60m)" }
-      ]
-    }
-  ];
+  const projectKey = activeProject?.project_key || "";
 
   const loadTickets = useCallback(async () => {
     setIsLoading(true);
     try {
       const data = await fetchBoardTickets(projectKey);
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
         setTickets(data);
         if (selectedTicket) {
           const updated = data.find((t) => t.key === selectedTicket.key);
           if (updated) setSelectedTicket(updated);
         }
-      } else {
-        setTickets(defaultTickets);
       }
 
       // Also load team-wise activity
@@ -409,7 +68,6 @@ export function LiveTriageBoard({ activeProject, activeEnvironment }) {
       }
     } catch (e) {
       console.error("Failed to load board tickets:", e);
-      setTickets((prev) => (prev.length > 0 ? prev : defaultTickets));
     } finally {
       setIsLoading(false);
     }
@@ -608,7 +266,7 @@ export function LiveTriageBoard({ activeProject, activeEnvironment }) {
                 <span className="radar-ping-dot" style={{ width: "6px", height: "6px" }} />
                 Live Telemetry Active
               </span>
-              <span className="badge badge-magenta">ADK 2.8 Autonomous Triage</span>
+              <span className="badge badge-magenta">Autonomous Triage</span>
               <span className="badge badge-amber">Team Activity & Evidence Trace</span>
             </div>
 
@@ -746,13 +404,29 @@ export function LiveTriageBoard({ activeProject, activeEnvironment }) {
           Live Event Stream
         </span>
         <div style={{ color: "var(--ink-secondary)", display: "flex", alignItems: "center", gap: "16px", overflowX: "hidden", whiteSpace: "nowrap" }}>
-          <span>💬 Sarah K. commented on <strong>BILL-1049</strong>: <em>"Testing pool scale to 50 on staging"</em></span>
-          <span style={{ color: "var(--ink-muted)" }}>•</span>
-          <span>🔒 Attached Evidence: <strong>HikariCP Pool Saturation</strong> (20/20 active conns)</span>
-          <span style={{ color: "var(--ink-muted)" }}>•</span>
-          <span>💬 Marcus T. commented on <strong>DB-3030</strong>: <em>"Terminated blocking session PID 10482"</em></span>
-          <span style={{ color: "var(--ink-muted)" }}>•</span>
-          <span>🔄 Alex Chen accepted handoff for <strong>NOTIF-501</strong> (AWS SES router activated)</span>
+          {teamActivityList.length > 0 ? (
+            teamActivityList.slice(0, 4).map((act, idx) => (
+              <React.Fragment key={idx}>
+                {idx > 0 && <span style={{ color: "var(--ink-muted)" }}>•</span>}
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                  <MessageSquare size={12} color="var(--accent-teal)" />
+                  <span><strong>{act.user}</strong>: <em>{act.action}</em> <span style={{ color: "var(--ink-muted)", fontSize: "11px" }}>({act.time})</span></span>
+                </span>
+              </React.Fragment>
+            ))
+          ) : tickets.length > 0 ? (
+            tickets.slice(0, 3).map((t, idx) => (
+              <React.Fragment key={t.id || idx}>
+                {idx > 0 && <span style={{ color: "var(--ink-muted)" }}>•</span>}
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                  <Zap size={12} color="var(--accent-amber)" />
+                  <span><strong>{t.key}</strong>: <em>{t.title}</em> — <span style={{ color: "var(--accent-teal)" }}>{t.status}</span></span>
+                </span>
+              </React.Fragment>
+            ))
+          ) : (
+            <span>No active incident alerts or team activities recorded for this project namespace.</span>
+          )}
         </div>
       </div>
 
@@ -1366,7 +1040,7 @@ export function LiveTriageBoard({ activeProject, activeEnvironment }) {
                         style={{
                           padding: "10px 12px",
                           borderRadius: "6px",
-                          background: "rgba(0, 0, 0, 0.2)",
+                          background: "var(--bg-app)",
                           border: "1px solid var(--border-subtle)",
                           fontSize: "12px"
                         }}
@@ -1559,7 +1233,8 @@ export function LiveTriageBoard({ activeProject, activeEnvironment }) {
                         style={{
                           padding: "8px 10px",
                           borderRadius: "6px",
-                          background: "rgba(0, 0, 0, 0.35)",
+                          background: "var(--bg-app)",
+                          border: "1px solid var(--border-subtle)",
                           color: "var(--ink-secondary)",
                           fontFamily: "'JetBrains Mono', monospace",
                           fontSize: "11px",

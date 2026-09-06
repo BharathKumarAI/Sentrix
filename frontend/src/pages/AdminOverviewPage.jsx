@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { fetchAdminOverview } from "../api/client";
 import {
   Home,
   Layers,
@@ -21,95 +22,39 @@ import {
   Sliders,
   ExternalLink
 } from "lucide-react";
+import { useAdminSync } from "../context/AdminSyncContext";
 
 export function AdminOverviewPage({ projects = [], onOpenNewProjectModal }) {
   const navigate = useNavigate();
+  const [overviewData, setOverviewData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const executiveKpis = [
-    {
-      label: "Active Enterprise Projects",
-      value: "56",
-      subtext: "12 Tier-1 Mission Critical",
-      change: "+4 this month",
-      icon: Layers,
-      color: "var(--prism-pink)"
-    },
-    {
-      label: "Autonomous Triage MTTA",
-      value: "18s",
-      subtext: "vs 6.2m human baseline",
-      change: "95.1% faster response",
-      icon: Clock,
-      color: "var(--accent-teal)"
-    },
-    {
-      label: "Mean Time to Resolve (MTTR)",
-      value: "14.2m",
-      subtext: "Down from 44.0m baseline",
-      change: "68% resolution acceleration",
-      icon: TrendingDown,
-      color: "var(--accent-violet)"
-    },
-    {
-      label: "Guarded Action Proposals",
-      value: "100%",
-      subtext: "Zero unauthorized writes",
-      change: "Cryptographic lock verified",
-      icon: ShieldCheck,
-      color: "var(--accent-amber)"
-    }
-  ];
+  const loadData = () => {
+    fetchAdminOverview()
+      .then((data) => {
+        if (data && !data.error) {
+          setOverviewData(data);
+        }
+      })
+      .catch((err) => console.warn("Failed to load admin overview:", err))
+      .finally(() => setIsLoading(false));
+  };
 
-  const criticalProjects = [
-    {
-      key: "BILLING",
-      name: "Global Billing & Payment Gateway",
-      tier: "Tier-1 Mission Critical",
-      status: "HEALTHY",
-      mtta: "14s",
-      mttr: "12.4m",
-      sla: "99.99%",
-      activeIncidents: 1,
-      fixTeam: "Payments Core Team",
-      envCount: 3
-    },
-    {
-      key: "AUTH",
-      name: "IAM & Edge OAuth Gateway",
-      tier: "Tier-1 Mission Critical",
-      status: "HEALTHY",
-      mtta: "19s",
-      mttr: "8.6m",
-      sla: "100.0%",
-      activeIncidents: 0,
-      fixTeam: "Identity & Access Squad",
-      envCount: 3
-    },
-    {
-      key: "CHECKOUT",
-      name: "Omnichannel Checkout & Cart",
-      tier: "Tier-1 Mission Critical",
-      status: "HEALTHY",
-      mtta: "22s",
-      mttr: "16.1m",
-      sla: "99.98%",
-      activeIncidents: 1,
-      fixTeam: "Checkout Reliability",
-      envCount: 4
-    },
-    {
-      key: "FULFILLMENT",
-      name: "Supply Chain & Warehouse Allocation",
-      tier: "Tier-2 High Availability",
-      status: "HEALTHY",
-      mtta: "28s",
-      mttr: "19.5m",
-      sla: "99.95%",
-      activeIncidents: 0,
-      fixTeam: "Fulfillment SRE",
-      envCount: 2
-    }
-  ];
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  useAdminSync(() => {
+    loadData();
+  });
+
+  const kpiIcons = [Layers, Clock, TrendingDown, ShieldCheck];
+
+  const executiveKpis = (overviewData?.executiveKpis || []).map((k, idx) => ({ ...k, icon: kpiIcons[idx % kpiIcons.length] }));
+
+
+  const criticalProjects = overviewData?.criticalProjects || [];
+
 
   return (
     <div
@@ -148,7 +93,8 @@ export function AdminOverviewPage({ projects = [], onOpenNewProjectModal }) {
               alignItems: "center",
               justifyContent: "center",
               color: "#fff",
-              boxShadow: "0 0 18px var(--prism-glow)"
+              boxShadow: "0 0 18px var(--prism-glow)",
+              flexShrink: 0
             }}
           >
             <Home size={24} />
@@ -160,7 +106,7 @@ export function AdminOverviewPage({ projects = [], onOpenNewProjectModal }) {
                 PLATFORM • EXECUTIVE CONTROL PLANE
               </span>
               <span className="badge badge-teal">Multi-Tenant Enterprise</span>
-              <span className="badge badge-magenta">ADK 2.8 Autonomous Engine</span>
+              <span className="badge badge-magenta">Autonomous Engine</span>
             </div>
             <h1 style={{ fontSize: "20px", fontWeight: 700, color: "var(--ink-primary)", marginTop: "4px" }}>
               Enterprise SRE Platform Overview
@@ -196,7 +142,14 @@ export function AdminOverviewPage({ projects = [], onOpenNewProjectModal }) {
 
       {/* 2. Executive KPI Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px" }}>
-        {executiveKpis.map((kpi) => {
+        {isLoading && [0, 1, 2, 3].map((i) => (
+          <div key={i} className="prism-card" style={{ padding: "20px", background: "var(--bg-card)", border: "1px solid var(--border-card)", height: "110px", opacity: 0.5 }}>
+            <div style={{ width: "60%", height: "11px", background: "var(--bg-elevated)", borderRadius: "4px", marginBottom: "12px" }} />
+            <div style={{ width: "40%", height: "28px", background: "var(--bg-elevated)", borderRadius: "4px", marginBottom: "12px" }} />
+            <div style={{ width: "80%", height: "11px", background: "var(--bg-elevated)", borderRadius: "4px" }} />
+          </div>
+        ))}
+        {!isLoading && executiveKpis.map((kpi) => {
           const Icon = kpi.icon;
           return (
             <div
@@ -261,12 +214,20 @@ export function AdminOverviewPage({ projects = [], onOpenNewProjectModal }) {
               className="btn-ghost"
               style={{ fontSize: "11.5px", gap: "4px", color: "var(--prism-pink)" }}
             >
-              View all 56 projects <ArrowRight size={12} />
+              View all {overviewData?.totalProjectsCount || criticalProjects.length || projects.length} projects <ArrowRight size={12} />
             </button>
           </div>
 
+
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {criticalProjects.map((p) => (
+            {isLoading ? (
+              <div style={{ padding: "24px", textAlign: "center", color: "var(--ink-tertiary)", fontSize: "12px" }}>Loading project fleet…</div>
+            ) : criticalProjects.length === 0 ? (
+              <div style={{ padding: "24px", textAlign: "center", color: "var(--ink-tertiary)", fontSize: "12px" }}>
+                No projects registered yet. <span style={{ color: "var(--prism-pink)", cursor: "pointer" }} onClick={() => navigate("/admin/projects?create=true")}>Register the first project →</span>
+              </div>
+            ) : (
+              criticalProjects.map((p) => (
               <div
                 key={p.key}
                 onClick={() => navigate(`/p/${p.key}/overview`)}
@@ -316,9 +277,11 @@ export function AdminOverviewPage({ projects = [], onOpenNewProjectModal }) {
                   </span>
                 </div>
               </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
+
 
         {/* Right Column: Platform Governance & Zero-Trust Tool Broker */}
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
@@ -338,15 +301,21 @@ export function AdminOverviewPage({ projects = [], onOpenNewProjectModal }) {
             <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "11.5px", borderTop: "1px solid var(--border-subtle)", paddingTop: "10px" }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ color: "var(--ink-tertiary)" }}>Authorized Write Proposals:</span>
-                <strong style={{ color: "var(--accent-teal)" }}>128 Approved</strong>
+                <strong style={{ color: "var(--accent-teal)" }}>
+                  {overviewData?.governance?.authorizedProposals ?? "—"}
+                </strong>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ color: "var(--ink-tertiary)" }}>Blocked Unauthorized Queries:</span>
-                <strong style={{ color: "#ef4444" }}>0 Breaches</strong>
+                <strong style={{ color: overviewData?.governance?.blockedQueriesCount > 0 ? "#ef4444" : "var(--accent-teal)" }}>
+                  {overviewData?.governance?.blockedQueries ?? "—"}
+                </strong>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ color: "var(--ink-tertiary)" }}>OKF Knowledge Nodes:</span>
-                <strong style={{ color: "var(--prism-pink)" }}>1,248 Precedents</strong>
+                <strong style={{ color: "var(--prism-pink)" }}>
+                  {overviewData?.governance?.knowledgeNodes ?? "—"}
+                </strong>
               </div>
             </div>
           </div>
@@ -358,6 +327,15 @@ export function AdminOverviewPage({ projects = [], onOpenNewProjectModal }) {
             </h4>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <button
+                onClick={() => navigate("/admin/harness")}
+                className="btn-ghost"
+                style={{ justifyContent: "space-between", fontSize: "12px", padding: "8px 10px" }}
+              >
+                <span style={{ display: "flex", alignItems: "center", gap: "8px" }}><Zap size={14} /> Agent Harness & Plugins</span>
+                <ArrowRight size={12} />
+              </button>
+
               <button
                 onClick={() => navigate("/admin/connectors")}
                 className="btn-ghost"

@@ -99,10 +99,17 @@ export function PrismShell({
         <main style={{
           flex: 1,
           overflowY: "auto",
-          background: "radial-gradient(ellipse 60% 40% at 50% -10%, rgba(225, 29, 72, 0.05) 0%, transparent 80%)",
+          background: "var(--bg-glow)",
           paddingBottom: "36px"
         }}>
-          <Outlet />
+          <Outlet context={{
+            projects,
+            activeProject,
+            onSelectProject,
+            activeEnvironment,
+            onSelectEnvironment,
+            onOpenNewProjectModal
+          }} />
         </main>
 
         {/* Bottom Circadian Telemetry Bar */}

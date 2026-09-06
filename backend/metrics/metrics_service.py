@@ -34,11 +34,11 @@ class MetricsService:
 
             total_runs = len(runs)
             completed_runs = sum(1 for r in runs if r.status in ("COMPLETED", "AWAITING_APPROVAL"))
-            success_rate = (completed_runs / total_runs * 100) if total_runs > 0 else 98.4
+            success_rate = (completed_runs / total_runs * 100) if total_runs > 0 else None
 
             # 2. Average Latency & Tokens
-            avg_latency = int(sum(r.latency_ms for r in runs) / total_runs) if total_runs > 0 else 380
-            total_tokens = sum(r.total_tokens for r in runs) if total_runs > 0 else 12500
+            avg_latency = int(sum(r.latency_ms for r in runs) / total_runs) if total_runs > 0 else None
+            total_tokens = sum(r.total_tokens for r in runs) if total_runs > 0 else 0
 
             # 3. Action proposals
             props_res = await db.execute(select(ActionProposal))
@@ -57,33 +57,33 @@ class MetricsService:
             cases_res = await db.execute(select(OkfTriagedCase))
             cases = cases_res.scalars().all()
             total_cases = len(cases)
-            avg_mttr = int(sum(c.mttr_minutes for c in cases) / total_cases) if total_cases > 0 else 15
+            avg_mttr = int(sum(c.mttr_minutes for c in cases) / total_cases) if total_cases > 0 else None
 
             # 6. Feedback Score
             fb_res = await db.execute(
                 select(func.avg(OkfFeedbackSignal.feedback_score)).where(OkfFeedbackSignal.feedback_score.isnot(None))
             )
-            avg_feedback = fb_res.scalar() or 4.8
+            avg_feedback = fb_res.scalar()
 
             return {
-                "total_investigations": max(total_runs, 34),
-                "investigation_success_rate": round(success_rate, 1),
+                "total_investigations": total_runs,
+                "investigation_success_rate": round(success_rate, 1) if success_rate is not None else None,
                 "average_triage_latency_ms": avg_latency,
-                "total_tokens_consumed": max(total_tokens, 45200),
+                "total_tokens_consumed": total_tokens,
                 "action_proposals": {
-                    "total": max(total_proposals, 18),
+                    "total": total_proposals,
                     "pending_approval": pending_proposals,
-                    "approved_and_executed": max(approved_proposals, 14)
+                    "approved_and_executed": approved_proposals
                 },
                 "connectors": {
-                    "total_active": total_connectors or 6,
-                    "healthy": healthy_count or 6,
-                    "degraded": 0
+                    "total_active": total_connectors,
+                    "healthy": healthy_count,
+                    "degraded": max(total_connectors - healthy_count, 0)
                 },
                 "okf_knowledge": {
-                    "total_distilled_cases": max(total_cases, 12),
+                    "total_distilled_cases": total_cases,
                     "average_mttr_minutes": avg_mttr,
-                    "mttr_reduction_percent": "68%"
+                    "mttr_reduction_percent": None
                 },
-                "user_satisfaction_score": round(float(avg_feedback), 1)
+                "user_satisfaction_score": round(float(avg_feedback), 1) if avg_feedback is not None else None
             }

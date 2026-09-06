@@ -48,14 +48,19 @@ class EnvironmentResolver:
                 logger.warning(f"Connector instance {connector_instance_id} not found; falling back to default.")
                 return project_environment, None
 
-            if instance.is_global:
-                logger.info(f"Connector '{instance.instance_key}' is GLOBAL. Executing in 'global' environment.")
-                return "global", instance.base_url
+            if instance.is_global or instance.scope == "ENVIRONMENT_INDEPENDENT":
+                logger.info(f"Connector '{instance.instance_key}' is ENVIRONMENT_INDEPENDENT. Executing universally.")
+                return "universal", instance.base_url
 
-            # 2. Check explicit project-to-tool environment mapping
+            # 2. Check explicit project-to-tool environment mapping (resolve project_id if passed as key)
+            from backend.database.models import Project
+            p_res = await db.execute(select(Project).where((Project.id == project_id) | (Project.project_key == project_id.upper())))
+            proj = p_res.scalars().first()
+            actual_pid = proj.id if proj else project_id
+
             mapping_query = select(ProjectToolEnvMapping).where(
-                ProjectToolEnvMapping.project_id == project_id,
-                ProjectToolEnvMapping.project_environment == project_environment,
+                (ProjectToolEnvMapping.project_id == actual_pid) | (ProjectToolEnvMapping.project_id == project_id),
+                ProjectToolEnvMapping.project_environment.ilike(project_environment),
                 ProjectToolEnvMapping.connector_instance_id == instance.id,
                 ProjectToolEnvMapping.is_active == True
             )
@@ -85,10 +90,15 @@ class EnvironmentResolver:
     async def get_all_mappings_for_project(cls, project_id: str) -> list:
         """Returns all configured tool mappings for a project to render in the UI."""
         async with get_async_db() as db:
+            from backend.database.models import Project
+            p_res = await db.execute(select(Project).where((Project.id == project_id) | (Project.project_key == project_id.upper())))
+            proj = p_res.scalars().first()
+            actual_pid = proj.id if proj else project_id
+
             query = (
                 select(ProjectToolEnvMapping, ConnectorInstance)
                 .join(ConnectorInstance, ProjectToolEnvMapping.connector_instance_id == ConnectorInstance.id)
-                .where(ProjectToolEnvMapping.project_id == project_id)
+                .where((ProjectToolEnvMapping.project_id == actual_pid) | (ProjectToolEnvMapping.project_id == project_id))
             )
             result = await db.execute(query)
             items = []
